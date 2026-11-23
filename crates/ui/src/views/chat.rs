@@ -20,7 +20,7 @@ use lingxi_domain::{
 use crate::components::{icon_xs, status_dot};
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, UiAction, status_label};
-use crate::tokens::{radius, space, surface, typo};
+use crate::tokens::{radius, space, surface, text, typo};
 
 pub fn render_chat_pane(
     state: &AppUiState,
@@ -68,15 +68,20 @@ pub fn render_chat_pane(
                 )
                 .when_some(thread.branch.clone(), |el, branch| {
                     el.child(
-                        Badge::new(branch)
-                            .variant(BadgeVariant::Outline)
-                            .icon(LucideIcon::GitBranch),
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(4.0))
+                            .text_size(typo::MICRO)
+                            .text_color(text::tertiary(theme))
+                            .child(icon_xs(LucideIcon::GitBranch, text::tertiary(theme)))
+                            .child(branch),
                     )
                 })
                 .child(
                     div()
-                        .text_size(typo::CAPTION)
-                        .text_color(theme.colors.muted_foreground)
+                        .text_size(typo::MICRO)
+                        .text_color(text::tertiary(theme))
                         .child(format!(
                             "{} · {}",
                             thread.model_selection.provider.display_name(),
@@ -84,13 +89,16 @@ pub fn render_chat_pane(
                         )),
                 )
                 .when(thread.status != ThreadRunStatus::Idle, |el| {
-                    el.child(Badge::new(status_label(thread.status)).variant(
-                        if thread.status == ThreadRunStatus::Error {
-                            BadgeVariant::Destructive
-                        } else {
-                            BadgeVariant::Secondary
-                        },
-                    ))
+                    el.child(
+                        div()
+                            .text_size(typo::MICRO)
+                            .text_color(if thread.status == ThreadRunStatus::Error {
+                                theme.colors.destructive
+                            } else {
+                                text::tertiary(theme)
+                            })
+                            .child(status_label(thread.status)),
+                    )
                 }),
         )
         .child(
@@ -101,9 +109,11 @@ pub fn render_chat_pane(
                 .flex_shrink_0()
                 .when(checkpoint_count > 0, |el| {
                     el.child(
-                        Badge::new(format!("{checkpoint_count} 检查点"))
-                            .variant(BadgeVariant::Outline)
-                            .icon(LucideIcon::Clock),
+                        div()
+                            .px(px(6.0))
+                            .text_size(typo::MICRO)
+                            .text_color(text::tertiary(theme))
+                            .child(format!("{checkpoint_count} 检查点")),
                     )
                 })
                 .child(
@@ -213,8 +223,8 @@ pub fn render_chat_pane(
                 .when(!is_user, |m| {
                     m.header_child(
                         div()
-                            .text_size(typo::CAPTION)
-                            .text_color(theme.colors.muted_foreground)
+                            .text_size(typo::MICRO)
+                            .text_color(text::tertiary(theme))
                             .child(thread.model_selection.provider.display_name()),
                     )
                 })
@@ -336,7 +346,7 @@ pub fn render_chat_pane(
                 .p(px(16.0))
                 .rounded(radius::CARD)
                 .border_1()
-                .border_color(theme.colors.border)
+                .border_color(surface::composer_border(theme))
                 .bg(surface::quiet_panel(theme))
                 .flex()
                 .flex_col()

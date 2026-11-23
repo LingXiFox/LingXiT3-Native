@@ -8,14 +8,14 @@ use gpui_kit::{
 use gpuicn::button::{Button, ButtonSize, ButtonVariant};
 use gpuicn::input::{Input, InputState};
 use gpuicn::sidebar::{
-    Sidebar, SidebarItem, SidebarItemSize, sidebar_badge, sidebar_group_label, sidebar_separator,
+    Sidebar, SidebarItem, SidebarItemSize, sidebar_group_label, sidebar_separator,
 };
 use gpuicn::theme::UiTheme;
 
 use crate::components::{icon_xs, status_dot};
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, SettingsSection, UiAction};
-use crate::tokens::{radius, space, typo};
+use crate::tokens::{space, text, typo};
 
 pub fn render_sidebar(
     state: &AppUiState,
@@ -120,7 +120,7 @@ pub fn render_sidebar(
                             .child(
                                 div()
                                     .text_size(typo::CAPTION)
-                                    .text_color(theme.colors.sidebar_foreground)
+                                    .text_color(text::secondary(theme))
                                     .child("设置"),
                             ),
                     ),
@@ -193,32 +193,23 @@ pub fn render_sidebar(
         let d_open = Arc::clone(dispatcher);
         sidebar = sidebar.child(
             div()
-                .px(px(12.0))
-                .py(px(14.0))
-                .rounded(radius::CARD)
-                .bg(theme.colors.sidebar_accent.opacity(0.45))
+                .px(px(10.0))
+                .py(px(12.0))
                 .flex()
                 .flex_col()
                 .gap(px(8.0))
                 .child(
                     div()
-                        .text_size(typo::UI_BODY)
-                        .font_weight(FontWeight::MEDIUM)
-                        .text_color(theme.colors.sidebar_foreground)
-                        .child("暂无已打开工作区"),
-                )
-                .child(
-                    div()
                         .text_size(typo::CAPTION)
                         .line_height(typo::CAPTION_LH)
-                        .text_color(theme.colors.sidebar_muted_foreground())
-                        .child("在右侧直接开始提问，或打开本地项目文件夹。"),
+                        .text_color(text::tertiary(theme))
+                        .child("暂无已打开工作区，可直接在右侧开始对话。"),
                 )
                 .child(
                     Button::new("sb.empty.open")
-                        .variant(ButtonVariant::Outline)
+                        .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
-                        .label("打开工作区")
+                        .label("打开本地工作区")
                         .on_click(move |_, _, _| d_open(UiAction::OpenWorkspaceDialog)),
                 ),
         );
@@ -340,9 +331,21 @@ pub fn render_sidebar(
                         .on_activate(move |_, _, _| d_sel(UiAction::SelectThread(tid.clone())));
 
                     if let Some(branch) = &thread.branch {
-                        item = item.trailing(sidebar_badge(branch.clone(), cx));
+                        item = item.trailing(
+                            div()
+                                .max_w(px(76.0))
+                                .truncate()
+                                .text_size(typo::MICRO)
+                                .text_color(text::tertiary(theme))
+                                .child(branch.clone()),
+                        );
                     } else if thread.unread {
-                        item = item.trailing(sidebar_badge("未读", cx));
+                        item = item.trailing(
+                            div()
+                                .text_size(typo::MICRO)
+                                .text_color(text::tertiary(theme))
+                                .child("未读"),
+                        );
                     }
 
                     sidebar = sidebar.child(item);

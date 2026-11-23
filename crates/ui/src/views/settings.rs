@@ -5,7 +5,6 @@ use gpui_kit::{
     App, Entity, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
     StatefulInteractiveElement as _, Styled, Window, div, prelude::FluentBuilder as _, px,
 };
-use gpuicn::badge::{Badge, BadgeVariant};
 use gpuicn::button::{Button, ButtonSize, ButtonVariant};
 use gpuicn::input::{Input, InputState};
 use gpuicn::kbd::Kbd;
@@ -20,7 +19,48 @@ use lingxi_domain::ThemeAppearance;
 use crate::fonts::has_misans_available;
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, SettingsSection, UiAction};
-use crate::tokens::{elevation, radius, space, typo};
+use crate::tokens::{elevation, radius, space, text, typo};
+
+fn setting_value_text(value: impl Into<SharedString>, theme: &UiTheme) -> impl IntoElement {
+    div()
+        .text_size(typo::CAPTION)
+        .text_color(text::secondary(theme))
+        .child(value.into())
+}
+
+fn setting_mono_text(value: impl Into<SharedString>, theme: &UiTheme) -> impl IntoElement {
+    div()
+        .font_family(theme.fonts.mono.clone())
+        .text_size(typo::CAPTION)
+        .text_color(text::secondary(theme))
+        .child(value.into())
+}
+
+fn setting_status_text(
+    label: impl Into<SharedString>,
+    active: bool,
+    theme: &UiTheme,
+) -> impl IntoElement {
+    div()
+        .flex()
+        .items_center()
+        .gap(px(6.0))
+        .child(div().w(px(6.0)).h(px(6.0)).rounded_full().bg(if active {
+            theme.colors.success
+        } else {
+            theme.colors.border
+        }))
+        .child(
+            div()
+                .text_size(typo::CAPTION)
+                .text_color(if active {
+                    text::secondary(theme)
+                } else {
+                    text::tertiary(theme)
+                })
+                .child(label.into()),
+        )
+}
 
 fn section_heading(title: &'static str, theme: &UiTheme) -> impl IntoElement {
     div()
@@ -270,33 +310,35 @@ fn render_general(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
         .child(setting_row(
             "界面语言",
             "默认优先简体中文与技术术语混排",
-            Badge::new(state.settings.language.clone()).variant(BadgeVariant::Secondary),
+            setting_value_text(state.settings.language.clone(), theme),
             theme,
         ))
         .child(Separator::new("set.gen.sep1").horizontal())
         .child(setting_row(
             "本地状态目录",
             "独立 SQLite WAL 数据库与运行时配置文件位置",
-            Badge::new("~/.lingxi-t3-native").variant(BadgeVariant::Outline),
+            setting_mono_text("~/.lingxi-t3-native", theme),
             theme,
         ))
         .child(Separator::new("set.gen.sep2").horizontal())
         .child(setting_row(
             "异常崩溃恢复",
             "启动时自动检测未完成 Turn 并重置为可继续状态",
-            Badge::new("已启用").variant(BadgeVariant::Secondary),
+            setting_status_text("已启用", true, theme),
             theme,
         ))
         .child(Separator::new("set.gen.sep3").horizontal())
         .child(setting_row(
             "已加载工作区与会话",
             "当前 SQLite 持久化状态统计",
-            Badge::new(format!(
-                "{} 工作区 · {} 会话",
-                state.projects.len(),
-                state.threads.len()
-            ))
-            .variant(BadgeVariant::Outline),
+            setting_value_text(
+                format!(
+                    "{} 工作区 · {} 会话",
+                    state.projects.len(),
+                    state.threads.len()
+                ),
+                theme,
+            ),
             theme,
         ))
 }
@@ -371,7 +413,13 @@ fn appearance_card(
                         .child(title),
                 )
                 .when(selected, |el| {
-                    el.child(Badge::new("当前").variant(BadgeVariant::Default))
+                    el.child(
+                        div()
+                            .text_size(typo::MICRO)
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.colors.primary)
+                            .child("当前"),
+                    )
                 }),
         )
         .child(
@@ -436,7 +484,7 @@ fn render_appearance(
         .child(setting_row(
             "字体排版栈",
             "英文/数字 Nunito Sans · 简体中文 MiSans · 代码 JetBrains Mono",
-            Badge::new("3-Font Stack").variant(BadgeVariant::Secondary),
+            setting_value_text("3-Font Stack", theme),
             theme,
         ))
         .child(Separator::new("set.app.sep2").horizontal())
@@ -514,8 +562,8 @@ fn render_providers(
                     "本地已探测 Provider（12 路原生驱动）",
                     theme,
                 ))
-                .child(
-                    Badge::new(format!(
+                .child(setting_value_text(
+                    format!(
                         "{} / {} 可用",
                         state
                             .provider_statuses
@@ -525,9 +573,9 @@ fn render_providers(
                             })
                             .count(),
                         state.provider_statuses.len()
-                    ))
-                    .variant(BadgeVariant::Secondary),
-                ),
+                    ),
+                    theme,
+                )),
         );
 
     for (idx, p) in state.provider_statuses.iter().enumerate() {
@@ -544,11 +592,11 @@ fn render_providers(
         root = root.child(setting_row(
             p.kind.display_name(),
             detail,
-            Badge::new(if installed { "已就绪" } else { "未安装" }).variant(if installed {
-                BadgeVariant::Secondary
-            } else {
-                BadgeVariant::Outline
-            }),
+            setting_status_text(
+                if installed { "已就绪" } else { "未安装" },
+                installed,
+                theme,
+            ),
             theme,
         ));
     }
@@ -592,12 +640,15 @@ fn render_mcp_skills(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
         .child(setting_row(
             "内置 MCP HTTP Server",
             "基于 Axum 提供 /mcp JSON-RPC 工具注册与调度端点",
-            Badge::new(if state.mcp_server_running {
-                "就绪"
-            } else {
-                "未启动"
-            })
-            .variant(BadgeVariant::Secondary),
+            setting_status_text(
+                if state.mcp_server_running {
+                    "就绪"
+                } else {
+                    "未启动"
+                },
+                state.mcp_server_running,
+                theme,
+            ),
             theme,
         ))
         .child(Separator::new("set.mcp.sep0").horizontal())
@@ -609,10 +660,10 @@ fn render_mcp_skills(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
                 .items_center()
                 .justify_between()
                 .child(section_heading("已发现本地 Skills", theme))
-                .child(
-                    Badge::new(format!("{} 个", state.discovered_skills.len()))
-                        .variant(BadgeVariant::Secondary),
-                ),
+                .child(setting_value_text(
+                    format!("{} 个", state.discovered_skills.len()),
+                    theme,
+                )),
         );
 
     if state.discovered_skills.is_empty() {
@@ -631,7 +682,7 @@ fn render_mcp_skills(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
             col = col.child(setting_row(
                 skill.name.clone(),
                 skill.description.clone(),
-                Badge::new("SKILL.md").variant(BadgeVariant::Outline),
+                setting_mono_text("SKILL.md", theme),
                 theme,
             ));
         }
@@ -706,7 +757,7 @@ fn render_remote(
         .child(setting_row(
             "安全边界",
             "仅接受作用域受限的 Pairing Token，禁止暴露明文凭据",
-            Badge::new("Scoped Token").variant(BadgeVariant::Outline),
+            setting_value_text("Scoped Token", theme),
             theme,
         ))
 }
@@ -730,16 +781,15 @@ fn render_legacy_import(
         .child(setting_row(
             "原版 LingXi T3 数据库探测",
             detected,
-            Badge::new(if state.legacy_db_path.is_some() {
-                "已检测到"
-            } else {
-                "未找到"
-            })
-            .variant(if state.legacy_db_path.is_some() {
-                BadgeVariant::Secondary
-            } else {
-                BadgeVariant::Outline
-            }),
+            setting_status_text(
+                if state.legacy_db_path.is_some() {
+                    "已检测到"
+                } else {
+                    "未找到"
+                },
+                state.legacy_db_path.is_some(),
+                theme,
+            ),
             theme,
         ))
         .child(Separator::new("set.imp.sep1").horizontal())
@@ -791,7 +841,7 @@ fn render_about(
         .child(setting_row(
             "LingXi T3 Native",
             "Rust + GPUI + gpuicn + SQLite WAL + Tokio 原生桌面版",
-            Badge::new(format!("v{}", env!("CARGO_PKG_VERSION"))).variant(BadgeVariant::Secondary),
+            setting_mono_text(format!("v{}", env!("CARGO_PKG_VERSION")), theme),
             theme,
         ))
         .child(Separator::new("set.about.sep1").horizontal())
@@ -821,21 +871,21 @@ fn render_about(
         .child(setting_row(
             "Nunito Sans & JetBrains Mono",
             "SIL Open Font License 1.1 · Copyright © Nunito / JetBrains Mono Project Authors",
-            Badge::new("SIL OFL 1.1").variant(BadgeVariant::Outline),
+            setting_value_text("SIL OFL 1.1", theme),
             theme,
         ))
         .child(Separator::new("set.about.sep4").horizontal())
         .child(setting_row(
             "MiSans 简体中文字体",
             "Copyright © Beijing Xiaomi Mobile Software Co., Ltd. · 仅随应用内部嵌入使用",
-            Badge::new(misans_status).variant(BadgeVariant::Outline),
+            setting_value_text(misans_status, theme),
             theme,
         ))
         .child(Separator::new("set.about.sep5").horizontal())
         .child(setting_row(
             "软件开源许可",
             "MIT License · 基于 GPUI、gpui-kit、gpuicn、Tokio、SQLite 构建",
-            Badge::new("MIT").variant(BadgeVariant::Outline),
+            setting_value_text("MIT", theme),
             theme,
         ))
 }

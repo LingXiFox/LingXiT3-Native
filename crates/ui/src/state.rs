@@ -126,6 +126,8 @@ pub struct AppUiState {
     pub workspace_files: Vec<String>,
     pub ime_composing: bool,
     pub selected_provider_for_new_thread: ProviderKind,
+    pub selected_model_for_new_thread: ModelSelection,
+    pub selected_runtime_mode_for_new_thread: RuntimeMode,
 
     pub git_status: Option<GitStatusSummary>,
     pub git_diffs: Vec<GitFileDiff>,
@@ -184,6 +186,14 @@ impl AppUiState {
             workspace_files: Vec::new(),
             ime_composing: false,
             selected_provider_for_new_thread: ProviderKind::Codex,
+            selected_model_for_new_thread: ModelSelection {
+                provider: ProviderKind::Codex,
+                model_slug: "gpt-5-codex".to_string(),
+                thinking_level: Some("high".to_string()),
+                planner_model: None,
+                executor_model: None,
+            },
+            selected_runtime_mode_for_new_thread: RuntimeMode::ApprovalRequired,
             git_status: None,
             git_diffs: Vec::new(),
             selected_diff_path: None,
@@ -226,6 +236,18 @@ impl AppUiState {
     pub fn active_thread(&self) -> Option<&ThreadRecord> {
         let id = self.active_thread_id.as_ref()?;
         self.threads.iter().find(|t| &t.id == id)
+    }
+
+    pub fn effective_model_selection(&self) -> ModelSelection {
+        self.active_thread()
+            .map(|t| t.model_selection.clone())
+            .unwrap_or_else(|| self.selected_model_for_new_thread.clone())
+    }
+
+    pub fn effective_runtime_mode(&self) -> RuntimeMode {
+        self.active_thread()
+            .map(|t| t.runtime_mode)
+            .unwrap_or(self.selected_runtime_mode_for_new_thread)
     }
 
     pub fn active_messages(&self) -> &[ChatMessage] {
@@ -482,10 +504,12 @@ pub enum UiAction {
         thread_id: ThreadId,
         selection: ModelSelection,
     },
+    SelectDefaultModel(ModelSelection),
     SelectRuntimeMode {
         thread_id: ThreadId,
         mode: RuntimeMode,
     },
+    SelectDefaultRuntimeMode(RuntimeMode),
     SelectDiffFile(String),
     OpenFilePreview(String),
     RefreshGitAndWorkspace,

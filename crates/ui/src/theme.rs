@@ -38,7 +38,7 @@ pub fn lingxi_light_theme() -> UiTheme {
     theme.colors.secondary = rgb(0xEFE9DF);
     theme.colors.secondary_foreground = rgb(0x1F1B18);
     theme.colors.muted = rgb(0xF2ECE3);
-    theme.colors.muted_foreground = rgb(0x6E645B);
+    theme.colors.muted_foreground = rgb(0x756C63);
     theme.colors.accent = rgb(0xFBEFE6);
     theme.colors.accent_foreground = rgb(0x1F1B18);
     theme.colors.border = rgb(0xE6DDD1);
@@ -74,29 +74,29 @@ pub fn lingxi_dark_theme() -> UiTheme {
 
     // Level 0: Sidebar (#141312) vs Canvas (#1A1816) — clear spatial separation without flat black
     theme.colors.background = rgb(0x1A1816);
-    theme.colors.foreground = rgb(0xF2ECE3);
+    theme.colors.foreground = rgb(0xF0EAE1);
     theme.colors.sidebar = rgb(0x141312);
-    theme.colors.sidebar_foreground = rgb(0xF2ECE3);
+    theme.colors.sidebar_foreground = rgb(0xF0EAE1);
     theme.colors.sidebar_primary = rgb(0xF07C38);
     theme.colors.sidebar_primary_foreground = rgb(0x170D07);
     theme.colors.sidebar_accent = rgb(0x26221F);
-    theme.colors.sidebar_accent_foreground = rgb(0xF2ECE3);
+    theme.colors.sidebar_accent_foreground = rgb(0xF0EAE1);
     theme.colors.sidebar_border = rgb(0x25221F);
     theme.colors.sidebar_ring = rgb(0xF07C38);
-    theme.colors.sidebar_muted_foreground = Some(rgb(0x9C9186));
+    theme.colors.sidebar_muted_foreground = Some(rgb(0x9A9086));
 
     // Level 1 (#221F1C) & Level 2 (#272320) elevated surfaces
     theme.colors.card = rgb(0x221F1C);
-    theme.colors.card_foreground = rgb(0xF2ECE3);
+    theme.colors.card_foreground = rgb(0xF0EAE1);
     theme.colors.popover = rgb(0x272320);
-    theme.colors.popover_foreground = rgb(0xF2ECE3);
+    theme.colors.popover_foreground = rgb(0xF0EAE1);
 
     theme.colors.primary = rgb(0xF07C38);
     theme.colors.primary_foreground = rgb(0x170D07);
     theme.colors.secondary = rgb(0x282420);
-    theme.colors.secondary_foreground = rgb(0xF2ECE3);
+    theme.colors.secondary_foreground = rgb(0xF0EAE1);
     theme.colors.muted = rgb(0x24201D);
-    theme.colors.muted_foreground = rgb(0xA4998E);
+    theme.colors.muted_foreground = rgb(0x9A9086);
     theme.colors.accent = rgb(0x2D2018);
     theme.colors.accent_foreground = rgb(0xF2ECE3);
     theme.colors.border = rgb(0x312C27);

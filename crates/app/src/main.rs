@@ -330,14 +330,8 @@ fn handle_ui_action(
                 };
 
                 let tid = ThreadId::new();
-                let provider = shell.state.selected_provider_for_new_thread;
-                let selection = ModelSelection {
-                    provider,
-                    model_slug: "default".to_string(),
-                    thinking_level: None,
-                    planner_model: None,
-                    executor_model: None,
-                };
+                let selection = shell.state.selected_model_for_new_thread.clone();
+                let runtime_mode = shell.state.selected_runtime_mode_for_new_thread;
                 let title: String = prompt.chars().take(24).collect();
                 shell.state.threads.insert(
                     0,
@@ -346,7 +340,7 @@ fn handle_ui_action(
                         project_id: project_id.clone(),
                         title: title.clone(),
                         model_selection: selection.clone(),
-                        runtime_mode: RuntimeMode::ApprovalRequired,
+                        runtime_mode,
                         status: ThreadRunStatus::Running,
                         branch: None,
                         worktree_path: None,
@@ -386,7 +380,7 @@ fn handle_ui_action(
                             project_id,
                             title,
                             model_selection: selection,
-                            runtime_mode: RuntimeMode::ApprovalRequired,
+                            runtime_mode,
                             branch: None,
                             worktree_path: None,
                         })
@@ -457,10 +451,17 @@ fn handle_ui_action(
                     t.model_selection = selection;
                 }
             }
+            UiAction::SelectDefaultModel(selection) => {
+                shell.state.selected_provider_for_new_thread = selection.provider;
+                shell.state.selected_model_for_new_thread = selection;
+            }
             UiAction::SelectRuntimeMode { thread_id, mode } => {
                 if let Some(t) = shell.state.threads.iter_mut().find(|t| t.id == thread_id) {
                     t.runtime_mode = mode;
                 }
+            }
+            UiAction::SelectDefaultRuntimeMode(mode) => {
+                shell.state.selected_runtime_mode_for_new_thread = mode;
             }
             UiAction::OpenWorkspaceDialog => {
                 let fallback_path = std::env::current_dir()

@@ -12,9 +12,7 @@ use gpuicn::input::{InputEvent, InputState};
 use gpuicn::resizable::{PaneLimits, Resizable};
 use gpuicn::select::{SelectEvent, SelectItem, SelectState};
 use gpuicn::theme::UiTheme;
-use lingxi_domain::{
-    ModelSelection, ProviderKind, RuntimeMode, ThemeAppearance, ThreadId, UpdateChannel,
-};
+use lingxi_domain::{ThemeAppearance, ThreadId, UpdateChannel};
 
 use crate::state::{AppUiState, SettingsSection, UiAction};
 use crate::tokens::space::{
@@ -39,8 +37,6 @@ pub struct LingXiShellView {
     custom_acp_input: Entity<InputState>,
     remote_port_input: Entity<InputState>,
     terminal_input: Entity<InputState>,
-    provider_select: Entity<SelectState>,
-    mode_select: Entity<SelectState>,
     update_channel_select: Entity<SelectState>,
     command_state: Entity<CommandState>,
     diff_state: Entity<DiffState>,
@@ -58,11 +54,7 @@ impl LingXiShellView {
     ) -> Self {
         let composer = cx.new(|cx| {
             let mut c = ComposerState::new(6, window, cx);
-            c.set_placeholder(
-                "输入问题、任务描述，输入 @ 引用文件，/ 触发快捷命令…",
-                window,
-                cx,
-            );
+            c.set_placeholder("输入消息，@ 引用文件，/ 快捷命令…", window, cx);
             c
         });
         let d_comp = Arc::clone(&dispatcher);
@@ -190,68 +182,6 @@ impl LingXiShellView {
         )
         .detach();
 
-        let provider_items = all_provider_select_items();
-        let initial_provider = state
-            .active_thread()
-            .map(|t| provider_slug(t.model_selection.provider))
-            .unwrap_or("codex");
-        let provider_select = cx.new(|cx| {
-            let mut s = SelectState::new(provider_items, window, cx);
-            s.set_value(Some(initial_provider.into()), window, cx);
-            s
-        });
-        let d_prov = Arc::clone(&dispatcher);
-        cx.subscribe(&provider_select, move |this, _, event, _| {
-            if let SelectEvent::Change(Some(val)) = event
-                && let (Some(thread), Some(provider)) = (
-                    this.state.active_thread(),
-                    parse_provider_slug(val.as_ref()),
-                )
-            {
-                let mut selection: ModelSelection = thread.model_selection.clone();
-                selection.provider = provider;
-                d_prov(UiAction::SelectModel {
-                    thread_id: thread.id.clone(),
-                    selection,
-                });
-            }
-        })
-        .detach();
-
-        let mode_items = vec![
-            SelectItem::new("approval", "操作前确认"),
-            SelectItem::new("auto_edits", "自动接受编辑"),
-            SelectItem::new("auto", "自动调度"),
-            SelectItem::new("full_access", "完全自主执行"),
-        ];
-        let initial_mode = state
-            .active_thread()
-            .map(|t| runtime_mode_slug(t.runtime_mode))
-            .unwrap_or("approval");
-        let mode_select = cx.new(|cx| {
-            let mut s = SelectState::new(mode_items, window, cx);
-            s.set_value(Some(initial_mode.into()), window, cx);
-            s
-        });
-        let d_mode = Arc::clone(&dispatcher);
-        cx.subscribe(&mode_select, move |this, _, event, _| {
-            if let SelectEvent::Change(Some(val)) = event
-                && let Some(tid) = this.state.active_thread_id.clone()
-            {
-                let mode = match val.as_ref() {
-                    "full_access" => RuntimeMode::FullAccess,
-                    "auto_edits" => RuntimeMode::AutoAcceptEdits,
-                    "auto" => RuntimeMode::Auto,
-                    _ => RuntimeMode::ApprovalRequired,
-                };
-                d_mode(UiAction::SelectRuntimeMode {
-                    thread_id: tid,
-                    mode,
-                });
-            }
-        })
-        .detach();
-
         let channel_items = vec![
             SelectItem::new("stable", "Stable (稳定版)"),
             SelectItem::new("nightly", "Nightly (预览版)"),
@@ -307,8 +237,6 @@ impl LingXiShellView {
             custom_acp_input,
             remote_port_input,
             terminal_input,
-            provider_select,
-            mode_select,
             update_channel_select,
             command_state,
             diff_state,
@@ -389,10 +317,9 @@ impl Render for LingXiShellView {
                     &self.state,
                     thread,
                     &self.composer,
-                    &self.provider_select,
-                    &self.mode_select,
                     &self.dispatcher,
                     &theme,
+                    window,
                     cx,
                 ))
                 .into_any_element()
@@ -400,10 +327,9 @@ impl Render for LingXiShellView {
             render_welcome(
                 &self.state,
                 &self.composer,
-                &self.provider_select,
-                &self.mode_select,
                 &self.dispatcher,
                 &theme,
+                window,
                 cx,
             )
             .into_any_element()
@@ -549,57 +475,6 @@ pub fn toggle_appearance_mode(current: ThemeAppearance) -> ThemeAppearance {
     match current {
         ThemeAppearance::Light => ThemeAppearance::Dark,
         ThemeAppearance::Dark | ThemeAppearance::System => ThemeAppearance::Light,
-    }
-}
-
-fn provider_slug(kind: ProviderKind) -> &'static str {
-    match kind {
-        ProviderKind::Codex => "codex",
-        ProviderKind::Claude => "claude",
-        ProviderKind::Antigravity => "antigravity",
-        ProviderKind::Dsh => "dsh",
-        ProviderKind::Cursor => "cursor",
-        ProviderKind::Grok => "grok",
-        ProviderKind::OpenCode => "opencode",
-        ProviderKind::Pi => "pi",
-        ProviderKind::Muse => "muse",
-        ProviderKind::Kiro => "kiro",
-        ProviderKind::Fx => "fx",
-        ProviderKind::AcpRegistry => "acp_registry",
-    }
-}
-
-fn parse_provider_slug(slug: &str) -> Option<ProviderKind> {
-    Some(match slug {
-        "codex" => ProviderKind::Codex,
-        "claude" => ProviderKind::Claude,
-        "antigravity" => ProviderKind::Antigravity,
-        "dsh" => ProviderKind::Dsh,
-        "cursor" => ProviderKind::Cursor,
-        "grok" => ProviderKind::Grok,
-        "opencode" => ProviderKind::OpenCode,
-        "pi" => ProviderKind::Pi,
-        "muse" => ProviderKind::Muse,
-        "kiro" => ProviderKind::Kiro,
-        "fx" => ProviderKind::Fx,
-        "acp_registry" => ProviderKind::AcpRegistry,
-        _ => return None,
-    })
-}
-
-fn all_provider_select_items() -> Vec<SelectItem> {
-    ProviderKind::ALL
-        .into_iter()
-        .map(|p| SelectItem::new(provider_slug(p), p.display_name()))
-        .collect()
-}
-
-fn runtime_mode_slug(mode: RuntimeMode) -> &'static str {
-    match mode {
-        RuntimeMode::ApprovalRequired => "approval",
-        RuntimeMode::AutoAcceptEdits => "auto_edits",
-        RuntimeMode::Auto => "auto",
-        RuntimeMode::FullAccess => "full_access",
     }
 }
 

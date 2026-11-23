@@ -19,7 +19,7 @@ use gpuicn::theme::UiTheme;
 use crate::components::icon_xs;
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, UiAction};
-use crate::tokens::{surface, typo};
+use crate::tokens::{surface, text, typo};
 
 fn tab_value(tab: InspectorTab) -> &'static str {
     match tab {
@@ -185,11 +185,26 @@ fn render_diff_tab(
                     ButtonVariant::Ghost
                 })
                 .size(ButtonSize::Xs)
-                .label(format!(
-                    "{} (+{}/-{})",
-                    diff.path, diff.additions, diff.deletions
-                ))
                 .on_click(move |_, _, _| d_sel(UiAction::SelectDiffFile(path.clone())))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .text_size(typo::CAPTION)
+                        .text_color(if selected {
+                            text::primary(theme)
+                        } else {
+                            text::secondary(theme)
+                        })
+                        .child(diff.path.clone())
+                        .child(
+                            div()
+                                .text_size(typo::MICRO)
+                                .text_color(text::tertiary(theme))
+                                .child(format!("+{}/-{}", diff.additions, diff.deletions)),
+                        ),
+                )
         }));
 
     div()

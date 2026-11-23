@@ -2,6 +2,7 @@ pub mod chat;
 pub mod composer;
 pub mod inspector;
 pub mod modals;
+pub mod model_picker;
 pub mod settings;
 pub mod sidebar;
 pub mod titlebar;

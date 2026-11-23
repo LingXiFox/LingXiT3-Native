@@ -98,3 +98,30 @@ Final polish caught and resolved during v2 visual inspection:
 - `cargo clippy --workspace --all-targets -- -D warnings`: Passed (0 warnings)
 - `cargo test --workspace`: Passed (all crates, 0 failures)
 - macOS Packaging (`./scripts/package-macos.sh`): Produced `dist/LingXi T3 Native.app` & `dist/LingXiT3-Native-0.1.0-macos-arm64.dmg`
+
+---
+
+## 6. v3 Visual Noise Reduction & Claude Desktop Polish
+
+### 6.1 Key De-Noising Refinements
+
+- **Typography & Semantic Ink Contrast** ([tokens.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/tokens.rs), [theme.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/theme.rs)):
+  - Refined scale (`HERO_TITLE 28px`, `SECTION_TITLE 14px`, `CHAT_PROSE 14.5px`, `CAPTION 12.5px`, `MICRO 11.5px`) and introduced 3-tier semantic ink (`text::primary`, `text::secondary`, `text::tertiary`) plus `surface::composer_border`, `surface::subtle_chip`, and `surface::subtle_chip_hover`.
+- **Lightweight Ghost Model & Mode Popovers** ([model_picker.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/model_picker.rs)):
+  - Replaced bulky bordered `Select` dropdowns in Composer with borderless Ghost triggers (`gpt-5-codex 高 v` and `确认 v`) backed by native `gpuicn::popover::Popover` (thinking effort pills + 12-provider selector + runtime mode switcher) wired to real `SelectModel` / `SelectDefaultModel` / `SelectRuntimeMode` / `SelectDefaultRuntimeMode` actions.
+- **Shared Composer & 3-Tier Welcome Page** ([composer.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/composer.rs), [welcome.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/welcome.rs)):
+  - Unified Welcome and Chat around `render_composer_box` (`18px` radius, hairline border, Level 1 shadow, sole Fox-Orange primary Send button).
+  - Welcome page establishes a strict 3-tier hierarchy: horizontal Fox mark + `28px` hero title → Level 1 Composer → 4 soft borderless chips (`打开工作区`, `导入原版`, `命令面板`, `配置智能体`), moving technical provider counts out to Settings.
+- **Quiet Chrome & Settings** ([titlebar.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/titlebar.rs), [sidebar.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/sidebar.rs), [chat.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/chat.rs), [inspector.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/inspector.rs), [settings.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/settings.rs)):
+  - Converted TitleBar command trigger to Ghost, replaced bordered thread badges/setting value badges with calm secondary/tertiary text and status dots, and matched Inspector tabs/pills to the same auxiliary contrast tier.
+
+### 6.2 v3 Screenshot & Release Benchmark Sign-Off
+
+- Visually inspected all 23 v3 screenshots (`Welcome`, `Chat`, `Model Picker Popover`, `Settings`, `Inspector`, `Command Palette`, `Approval`, `Update`) across `1440×900`, `1280×800`, `960×680`, Light & Dark via `read_file`.
+- Post-v3 Release `--bench` metrics:
+  - `rss_mib`: `21.828125 MiB` (`22,888,448 B`)
+  - `threads_10k_filter_ms`: `1.615041 ms`
+  - `markdown_500_streaming_chunks_ms`: `8.369417 ms`
+  - `sqlite_1000_messages_write_ms`: `170.568791 ms`
+  - `sqlite_1000_messages_read_ms`: `0.417917 ms`
+- `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test --workspace`, and `./scripts/package-macos.sh` all passed cleanly.

@@ -7,23 +7,26 @@ use gpuicn::theme::{ThemeMode, UiShadows, UiTextStyle, UiTheme, UiTypography};
 pub mod typo {
     use super::{Pixels, px};
 
-    pub const PAGE_TITLE: Pixels = px(22.0);
-    pub const PAGE_TITLE_LH: Pixels = px(30.0);
+    pub const PAGE_TITLE: Pixels = px(20.0);
+    pub const PAGE_TITLE_LH: Pixels = px(28.0);
 
-    pub const HERO_TITLE: Pixels = px(24.0);
-    pub const HERO_TITLE_LH: Pixels = px(32.0);
+    pub const HERO_TITLE: Pixels = px(28.0);
+    pub const HERO_TITLE_LH: Pixels = px(36.0);
 
-    pub const SECTION_TITLE: Pixels = px(15.5);
-    pub const SECTION_TITLE_LH: Pixels = px(22.0);
+    pub const SECTION_TITLE: Pixels = px(14.0);
+    pub const SECTION_TITLE_LH: Pixels = px(20.0);
 
     pub const CHAT_PROSE: Pixels = px(14.5);
-    pub const CHAT_PROSE_LH: Pixels = px(23.0);
+    pub const CHAT_PROSE_LH: Pixels = px(23.5);
 
     pub const UI_BODY: Pixels = px(13.5);
     pub const UI_BODY_LH: Pixels = px(20.0);
 
     pub const CAPTION: Pixels = px(12.5);
     pub const CAPTION_LH: Pixels = px(18.0);
+
+    pub const MICRO: Pixels = px(11.5);
+    pub const MICRO_LH: Pixels = px(16.0);
 
     pub const CODE: Pixels = px(13.0);
     pub const CODE_LH: Pixels = px(20.0);
@@ -49,7 +52,7 @@ pub mod space {
     pub const INSPECTOR_MAX_WIDTH: f32 = 640.0;
 
     pub const CHAT_COLUMN_MAX_WIDTH: Pixels = px(780.0);
-    pub const WELCOME_COMPOSER_MAX_WIDTH: Pixels = px(680.0);
+    pub const WELCOME_COMPOSER_MAX_WIDTH: Pixels = px(660.0);
 }
 
 /// Centralized corner radius tokens.
@@ -59,13 +62,63 @@ pub mod radius {
     pub const CONTROL: Pixels = px(8.0);
     pub const CARD: Pixels = px(12.0);
     pub const MODAL: Pixels = px(14.0);
-    pub const COMPOSER: Pixels = px(16.0);
+    pub const COMPOSER: Pixels = px(18.0);
     pub const BUBBLE: Pixels = px(14.0);
+}
+
+/// Semantic text contrast levels for quiet visual hierarchy.
+pub mod text {
+    use super::{Rgba, ThemeMode, UiTheme, rgb};
+
+    /// Primary reading & heading ink.
+    pub fn primary(theme: &UiTheme) -> Rgba {
+        theme.colors.foreground
+    }
+
+    /// Secondary ink: model label, setting values, section metadata.
+    pub fn secondary(theme: &UiTheme) -> Rgba {
+        match theme.mode {
+            ThemeMode::Light => rgb(0x6E665E),
+            ThemeMode::Dark => rgb(0x9E958C),
+        }
+    }
+
+    /// Tertiary ink: thinking level, timestamps, subtle hints, trailing metadata.
+    pub fn tertiary(theme: &UiTheme) -> Rgba {
+        match theme.mode {
+            ThemeMode::Light => rgb(0x968E85),
+            ThemeMode::Dark => rgb(0x736B63),
+        }
+    }
 }
 
 /// Semantic surface helpers not already directly mapped by `UiColors`.
 pub mod surface {
-    use super::{Rgba, ThemeMode, UiTheme, rgb};
+    use super::{Rgba, ThemeMode, UiTheme, rgb, rgba};
+
+    /// Soft hairline border for the floating Composer container.
+    pub fn composer_border(theme: &UiTheme) -> Rgba {
+        match theme.mode {
+            ThemeMode::Light => rgba(0x1F1B181A),
+            ThemeMode::Dark => rgba(0xFFF8F01A),
+        }
+    }
+
+    /// Quiet borderless chip surface for Welcome quick actions.
+    pub fn subtle_chip(theme: &UiTheme) -> Rgba {
+        match theme.mode {
+            ThemeMode::Light => rgb(0xF1ECE4),
+            ThemeMode::Dark => rgb(0x23201D),
+        }
+    }
+
+    /// Hover surface for borderless quick action chips.
+    pub fn subtle_chip_hover(theme: &UiTheme) -> Rgba {
+        match theme.mode {
+            ThemeMode::Light => rgb(0xE9E2D7),
+            ThemeMode::Dark => rgb(0x2C2824),
+        }
+    }
 
     /// Soft tinted surface for user chat messages (no hard outer border).
     pub fn user_bubble(theme: &UiTheme) -> Rgba {

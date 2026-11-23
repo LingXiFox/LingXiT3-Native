@@ -15,7 +15,7 @@ use lingxi_domain::ThemeAppearance;
 use crate::components::{fox_brand_mark, icon_xs};
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, SettingsSection, UiAction};
-use crate::tokens::typo;
+use crate::tokens::{text, typo};
 
 pub fn render_titlebar(
     state: &AppUiState,
@@ -164,8 +164,8 @@ pub fn render_titlebar(
                 .child(
                     div()
                         .text_size(typo::UI_BODY)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(theme.colors.foreground)
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(text::secondary(theme))
                         .child("LingXi T3"),
                 ),
         )
@@ -178,7 +178,7 @@ pub fn render_titlebar(
                 .flex_shrink_0()
                 .child(
                     Button::new("tb.cmd")
-                        .variant(ButtonVariant::Outline)
+                        .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
                         .on_click(move |_, _, _| d_cmd(UiAction::OpenCommandPalette))
                         .child(
@@ -186,11 +186,11 @@ pub fn render_titlebar(
                                 .flex()
                                 .items_center()
                                 .gap(px(6.0))
-                                .child(icon_xs(LucideIcon::Search, theme.colors.muted_foreground))
+                                .child(icon_xs(LucideIcon::Search, text::tertiary(theme)))
                                 .child(
                                     div()
                                         .text_size(typo::CAPTION)
-                                        .text_color(theme.colors.muted_foreground)
+                                        .text_color(text::tertiary(theme))
                                         .child("命令面板"),
                                 )
                                 .child(Kbd::new("⌘K")),
@@ -212,7 +212,7 @@ pub fn render_titlebar(
                             if state.inspector_open {
                                 theme.colors.primary
                             } else {
-                                theme.colors.foreground
+                                text::secondary(theme)
                             },
                         )),
                 )
@@ -225,7 +225,7 @@ pub fn render_titlebar(
                         .child(
                             lucide(theme_icon)
                                 .size(px(15.0))
-                                .text_color(theme.colors.foreground),
+                                .text_color(text::secondary(theme)),
                         ),
                 )
                 .child(
@@ -240,7 +240,7 @@ pub fn render_titlebar(
                                 .child(
                                     lucide(LucideIcon::Download)
                                         .size(px(15.0))
-                                        .text_color(theme.colors.foreground),
+                                        .text_color(text::secondary(theme)),
                                 )
                                 .when(state.available_update.is_some(), |el| {
                                     el.child(
@@ -267,7 +267,7 @@ pub fn render_titlebar(
                         .child(
                             lucide(LucideIcon::Settings)
                                 .size(px(15.0))
-                                .text_color(theme.colors.foreground),
+                                .text_color(text::secondary(theme)),
                         ),
                 )
                 .when(!state.approvals_by_thread.is_empty(), |el| {
