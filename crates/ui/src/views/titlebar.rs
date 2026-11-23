@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    App, InteractiveElement as _, IntoElement, ParentElement, SharedString,
+    App, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
     StatefulInteractiveElement as _, Styled, div, prelude::FluentBuilder as _, px,
 };
 use gpuicn::badge::{Badge, BadgeVariant};
@@ -14,7 +14,8 @@ use lingxi_domain::ThemeAppearance;
 
 use crate::components::{fox_brand_mark, icon_xs};
 use crate::shell::ActionDispatcher;
-use crate::state::{AppUiState, InspectorTab, SettingsSection, UiAction};
+use crate::state::{AppUiState, SettingsSection, UiAction};
+use crate::tokens::typo;
 
 pub fn render_titlebar(
     state: &AppUiState,
@@ -34,9 +35,7 @@ pub fn render_titlebar(
 
     let d_sidebar = Arc::clone(dispatcher);
     let d_cmd = Arc::clone(dispatcher);
-    let d_diff = Arc::clone(dispatcher);
-    let d_term = Arc::clone(dispatcher);
-    let d_metrics = Arc::clone(dispatcher);
+    let d_inspector = Arc::clone(dispatcher);
     let d_theme = Arc::clone(dispatcher);
     let d_update = Arc::clone(dispatcher);
     let d_settings = Arc::clone(dispatcher);
@@ -45,10 +44,6 @@ pub fn render_titlebar(
         .active_project()
         .map(|p| p.title.clone())
         .unwrap_or_else(|| "LingXi T3 Native".to_string());
-
-    let diff_active = state.inspector_open && state.inspector_tab == InspectorTab::Diff;
-    let term_active = state.inspector_open && state.inspector_tab == InspectorTab::Terminal;
-    let metrics_active = state.inspector_open && state.inspector_tab == InspectorTab::Metrics;
 
     let mut tab_strip = div()
         .flex_1()
@@ -65,7 +60,7 @@ pub fn render_titlebar(
                 .items_center()
                 .gap(px(8.0))
                 .px(px(6.0))
-                .text_size(px(13.0))
+                .text_size(typo::CAPTION)
                 .text_color(theme.colors.muted_foreground)
                 .child(active_project_name),
         );
@@ -82,9 +77,9 @@ pub fn render_titlebar(
                     div()
                         .id(("titlebar-tab", idx))
                         .h(px(26.0))
-                        .max_w(px(180.0))
+                        .max_w(px(190.0))
                         .px(px(10.0))
-                        .rounded(px(6.0))
+                        .rounded(px(7.0))
                         .border_1()
                         .border_color(if is_active {
                             theme.colors.border
@@ -105,7 +100,7 @@ pub fn render_titlebar(
                             div()
                                 .min_w_0()
                                 .truncate()
-                                .text_size(px(12.5))
+                                .text_size(typo::CAPTION)
                                 .text_color(if is_active {
                                     theme.colors.foreground
                                 } else {
@@ -140,6 +135,8 @@ pub fn render_titlebar(
         px(10.0)
     };
 
+    let current_inspector_tab = state.inspector_tab;
+
     TitleBar::new()
         .page(true)
         .pl(left_pad)
@@ -166,8 +163,8 @@ pub fn render_titlebar(
                 .child(fox_brand_mark(20.0, theme))
                 .child(
                     div()
-                        .text_size(px(13.0))
-                        .font_weight(gpui_kit::FontWeight::SEMIBOLD)
+                        .text_size(typo::UI_BODY)
+                        .font_weight(FontWeight::SEMIBOLD)
                         .text_color(theme.colors.foreground)
                         .child("LingXi T3"),
                 ),
@@ -192,7 +189,7 @@ pub fn render_titlebar(
                                 .child(icon_xs(LucideIcon::Search, theme.colors.muted_foreground))
                                 .child(
                                     div()
-                                        .text_size(px(12.0))
+                                        .text_size(typo::CAPTION)
                                         .text_color(theme.colors.muted_foreground)
                                         .child("命令面板"),
                                 )
@@ -200,59 +197,19 @@ pub fn render_titlebar(
                         ),
                 )
                 .child(
-                    Button::new("tb.diff")
-                        .variant(if diff_active {
+                    Button::new("tb.inspector")
+                        .variant(if state.inspector_open {
                             ButtonVariant::Secondary
                         } else {
                             ButtonVariant::Ghost
                         })
                         .size(ButtonSize::IconSm)
-                        .aria_label("Diff 检查器")
+                        .aria_label("展开/收起工作区工具面板")
                         .on_click(move |_, _, _| {
-                            d_diff(UiAction::ToggleInspector(InspectorTab::Diff))
+                            d_inspector(UiAction::ToggleInspector(current_inspector_tab))
                         })
-                        .child(lucide(LucideIcon::GitCompare).size(px(15.0)).text_color(
-                            if diff_active {
-                                theme.colors.primary
-                            } else {
-                                theme.colors.foreground
-                            },
-                        )),
-                )
-                .child(
-                    Button::new("tb.terminal")
-                        .variant(if term_active {
-                            ButtonVariant::Secondary
-                        } else {
-                            ButtonVariant::Ghost
-                        })
-                        .size(ButtonSize::IconSm)
-                        .aria_label("内嵌终端")
-                        .on_click(move |_, _, _| {
-                            d_term(UiAction::ToggleInspector(InspectorTab::Terminal))
-                        })
-                        .child(lucide(LucideIcon::Terminal).size(px(15.0)).text_color(
-                            if term_active {
-                                theme.colors.primary
-                            } else {
-                                theme.colors.foreground
-                            },
-                        )),
-                )
-                .child(
-                    Button::new("tb.metrics")
-                        .variant(if metrics_active {
-                            ButtonVariant::Secondary
-                        } else {
-                            ButtonVariant::Ghost
-                        })
-                        .size(ButtonSize::IconSm)
-                        .aria_label("资源与额度监控")
-                        .on_click(move |_, _, _| {
-                            d_metrics(UiAction::ToggleInspector(InspectorTab::Metrics))
-                        })
-                        .child(lucide(LucideIcon::Activity).size(px(15.0)).text_color(
-                            if metrics_active {
+                        .child(lucide(LucideIcon::PanelRight).size(px(15.0)).text_color(
+                            if state.inspector_open {
                                 theme.colors.primary
                             } else {
                                 theme.colors.foreground

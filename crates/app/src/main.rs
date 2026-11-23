@@ -289,6 +289,120 @@ fn handle_ui_action(
                     let _ = orch.dispatch(cmd).await;
                 }));
             }
+            UiAction::StartQuickThread { prompt } => {
+                let now = chrono::Utc::now();
+                let project_id = if let Some(p) = shell.state.projects.first() {
+                    p.id.clone()
+                } else {
+                    let cwd = std::env::current_dir()
+                        .unwrap_or_else(|_| PathBuf::from("."))
+                        .to_string_lossy()
+                        .to_string();
+                    let name = Path::new(&cwd)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("Workspace")
+                        .to_string();
+                    let pid = ProjectId::new();
+                    shell.state.projects.push(lingxi_domain::ProjectRecord {
+                        id: pid.clone(),
+                        title: name.clone(),
+                        workspace_root: cwd.clone(),
+                        default_model: None,
+                        created_at: now,
+                        updated_at: now,
+                        archived: false,
+                    });
+                    shell.state.expanded_projects.insert(pid.clone());
+                    let orch = Arc::clone(orchestrator);
+                    let pid_db = pid.clone();
+                    std::mem::drop(runtime.spawn(async move {
+                        let _ = orch
+                            .dispatch(OrchestrationCommand::CreateProject {
+                                command_id: CommandId::new(),
+                                project_id: pid_db,
+                                title: name,
+                                workspace_root: cwd,
+                            })
+                            .await;
+                    }));
+                    pid
+                };
+
+                let tid = ThreadId::new();
+                let provider = shell.state.selected_provider_for_new_thread;
+                let selection = ModelSelection {
+                    provider,
+                    model_slug: "default".to_string(),
+                    thinking_level: None,
+                    planner_model: None,
+                    executor_model: None,
+                };
+                let title: String = prompt.chars().take(24).collect();
+                shell.state.threads.insert(
+                    0,
+                    ThreadRecord {
+                        id: tid.clone(),
+                        project_id: project_id.clone(),
+                        title: title.clone(),
+                        model_selection: selection.clone(),
+                        runtime_mode: RuntimeMode::ApprovalRequired,
+                        status: ThreadRunStatus::Running,
+                        branch: None,
+                        worktree_path: None,
+                        provider_session_id: None,
+                        pinned: false,
+                        archived: false,
+                        unread: false,
+                        created_at: now,
+                        updated_at: now,
+                    },
+                );
+                shell
+                    .state
+                    .messages_by_thread
+                    .entry(tid.clone())
+                    .or_default()
+                    .push(ChatMessage {
+                        id: MessageId::new(),
+                        thread_id: tid.clone(),
+                        turn_id: None,
+                        role: MessageRole::User,
+                        content: prompt.clone(),
+                        reasoning: None,
+                        is_streaming: false,
+                        tool_calls: Vec::new(),
+                        attachments: Vec::new(),
+                        created_at: now,
+                        updated_at: now,
+                    });
+                shell.state.select_thread(tid.clone());
+                let orch = Arc::clone(orchestrator);
+                std::mem::drop(runtime.spawn(async move {
+                    let _ = orch
+                        .dispatch(OrchestrationCommand::CreateThread {
+                            command_id: CommandId::new(),
+                            thread_id: tid.clone(),
+                            project_id,
+                            title,
+                            model_selection: selection,
+                            runtime_mode: RuntimeMode::ApprovalRequired,
+                            branch: None,
+                            worktree_path: None,
+                        })
+                        .await;
+                    let _ = orch
+                        .dispatch(OrchestrationCommand::StartTurn {
+                            command_id: CommandId::new(),
+                            thread_id: tid,
+                            turn_id: TurnId::new(),
+                            message_id: MessageId::new(),
+                            prompt,
+                            attachments: Vec::new(),
+                        })
+                        .await;
+                }));
+            }
             UiAction::CompactContext(thread_id) => {
                 let orch = Arc::clone(orchestrator);
                 let cmd = OrchestrationCommand::CompactContext {
@@ -1108,6 +1222,7 @@ fn main() -> anyhow::Result<()> {
 
     gpuicn::app::run(
         AppConfig::new(APP_DISPLAY_NAME)
+            .fonts(lingxi_ui::fonts::load_app_fonts())
             .themes(lingxi_light_theme(), lingxi_dark_theme())
             .appearance(to_gpuicn_appearance(settings.appearance))
             .window_options(window_opts),

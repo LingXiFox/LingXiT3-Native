@@ -20,6 +20,7 @@ Icon?
 # Local runtime & test data
 .tmp/
 tmp/
+assets/fonts/local/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm

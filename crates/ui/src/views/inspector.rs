@@ -19,6 +19,7 @@ use gpuicn::theme::UiTheme;
 use crate::components::icon_xs;
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, UiAction};
+use crate::tokens::{surface, typo};
 
 fn tab_value(tab: InspectorTab) -> &'static str {
     match tab {
@@ -280,10 +281,10 @@ fn render_terminal_tab(
 
     let output = if let Some(term) = active_term {
         let mut lines_col = div()
-            .p(px(12.0))
+            .p(px(14.0))
             .font_family(theme.fonts.mono.clone())
-            .text_size(px(12.5))
-            .line_height(px(19.0))
+            .text_size(typo::CODE)
+            .line_height(typo::CODE_LH)
             .text_color(theme.colors.foreground)
             .flex()
             .flex_col()
@@ -599,7 +600,7 @@ fn render_files_tab(
                 .hover(|s| s.bg(theme.colors.muted))
                 .cursor_pointer()
                 .on_click(move |_, _, _| d_open(UiAction::OpenFilePreview(path.clone())))
-                .text_size(px(12.5))
+                .text_size(typo::CAPTION)
                 .font_family(theme.fonts.mono.clone())
                 .truncate()
                 .child(file.clone()),
@@ -624,7 +625,7 @@ fn render_files_tab(
                     .h(px(220.0))
                     .border_t_1()
                     .border_color(theme.colors.border)
-                    .bg(theme.colors.card)
+                    .bg(surface::quiet_panel(theme))
                     .child(
                         ScrollArea::new("insp.files.preview")
                             .aria_label("文件内容预览")
@@ -633,8 +634,8 @@ fn render_files_tab(
                                 div()
                                     .p(px(12.0))
                                     .font_family(theme.fonts.mono.clone())
-                                    .text_size(px(12.0))
-                                    .line_height(px(18.0))
+                                    .text_size(typo::CODE)
+                                    .line_height(typo::CODE_LH)
                                     .child(preview),
                             ),
                     ),

@@ -21,6 +21,7 @@ use lingxi_domain::PermissionDecision;
 
 use crate::shell::ActionDispatcher;
 use crate::state::{ActiveModal, AppUiState, UiAction};
+use crate::tokens::{elevation, radius, surface, typo};
 use crate::views::settings::render_settings_popup_content;
 
 pub struct ModalHandles {
@@ -76,60 +77,65 @@ pub fn render_modals(
         "modal.command",
         &handles.command,
         |_, cx| {
-            div()
-                .w(px(580.0))
-                .max_w(px(580.0))
-                .rounded(px(12.0))
-                .border_1()
-                .border_color(theme.colors.border)
-                .bg(theme.colors.popover)
-                .overflow_hidden()
-                .flex()
-                .flex_col()
-                .child(
-                    command_dialog_popup("modal.command.popup", command_state, cx)
-                        .w_full()
-                        .max_w_full()
-                        .border_0(),
-                )
-                .child(
-                    div()
-                        .px(px(14.0))
-                        .py(px(8.0))
-                        .border_t_1()
-                        .border_color(theme.colors.border)
-                        .bg(theme.colors.muted.opacity(0.35))
-                        .flex()
-                        .items_center()
-                        .gap(px(14.0))
-                        .text_size(px(12.0))
-                        .text_color(theme.colors.muted_foreground)
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(4.0))
-                                .child(Kbd::new("↑"))
-                                .child(Kbd::new("↓"))
-                                .child("导航"),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(4.0))
-                                .child(Kbd::new("Enter"))
-                                .child("选择"),
-                        )
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(4.0))
-                                .child(Kbd::new("Esc"))
-                                .child("关闭"),
-                        ),
-                )
+            div().px(px(28.0)).py(px(24.0)).child(
+                div()
+                    .w(px(580.0))
+                    .max_w(px(580.0))
+                    .rounded(radius::MODAL)
+                    .border_1()
+                    .border_color(theme.colors.border)
+                    .bg(theme.colors.popover)
+                    .shadow(elevation::for_level2(theme))
+                    .font_family(theme.fonts.body.clone())
+                    .overflow_hidden()
+                    .flex()
+                    .flex_col()
+                    .child(
+                        command_dialog_popup("modal.command.popup", command_state, cx)
+                            .w_full()
+                            .max_w_full()
+                            .border_0()
+                            .shadow(Vec::new()),
+                    )
+                    .child(
+                        div()
+                            .px(px(14.0))
+                            .py(px(8.0))
+                            .border_t_1()
+                            .border_color(theme.colors.border)
+                            .bg(surface::subtle_footer(theme))
+                            .flex()
+                            .items_center()
+                            .gap(px(14.0))
+                            .text_size(typo::CAPTION)
+                            .text_color(theme.colors.muted_foreground)
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(4.0))
+                                    .child(Kbd::new("↑"))
+                                    .child(Kbd::new("↓"))
+                                    .child("导航"),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(4.0))
+                                    .child(Kbd::new("Enter"))
+                                    .child("选择"),
+                            )
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(4.0))
+                                    .child(Kbd::new("Esc"))
+                                    .child("关闭"),
+                            ),
+                    ),
+            )
         },
         window,
         cx,
@@ -145,21 +151,24 @@ pub fn render_modals(
         "modal.settings",
         &handles.settings,
         |window, cx| {
-            dialog_popup("modal.settings.popup", "设置中心", cx)
-                .w(px(880.0))
-                .max_w(px(880.0))
-                .p_0()
-                .border_0()
-                .child(render_settings_popup_content(
-                    state,
-                    custom_acp_input,
-                    remote_port_input,
-                    update_channel_select,
-                    dispatcher,
-                    theme,
-                    window,
-                    cx,
-                ))
+            div().px(px(28.0)).py(px(24.0)).child(
+                dialog_popup("modal.settings.popup", "设置中心", cx)
+                    .w_full()
+                    .max_w(px(780.0))
+                    .p_0()
+                    .border_0()
+                    .shadow(Vec::new())
+                    .child(render_settings_popup_content(
+                        state,
+                        custom_acp_input,
+                        remote_port_input,
+                        update_channel_select,
+                        dispatcher,
+                        theme,
+                        window,
+                        cx,
+                    )),
+            )
         },
         window,
         cx,
@@ -201,70 +210,74 @@ pub fn render_modals(
                 ),
             };
 
-            dialog_popup("modal.update.popup", "应用更新检查", cx)
-                .w(px(460.0))
-                .max_w(px(460.0))
-                .border_1()
-                .border_color(theme.colors.border)
-                .child(
-                    dialog_header(cx)
-                        .child(dialog_title("modal.update.title", cx).child(title))
-                        .child(dialog_description("modal.update.desc", cx).child(desc)),
-                )
-                .when_some(state.available_update.as_ref(), |el, info| {
-                    el.child(
-                        div()
-                            .p(px(12.0))
-                            .rounded(px(8.0))
-                            .border_1()
-                            .border_color(theme.colors.border)
-                            .bg(theme.colors.muted.opacity(0.4))
-                            .text_size(px(13.0))
-                            .text_color(theme.colors.foreground)
-                            .child(info.notes.clone()),
+            div().px(px(28.0)).py(px(24.0)).child(
+                dialog_popup("modal.update.popup", "应用更新检查", cx)
+                    .w(px(460.0))
+                    .max_w(px(460.0))
+                    .rounded(radius::MODAL)
+                    .border_1()
+                    .border_color(theme.colors.border)
+                    .shadow(elevation::for_level3(theme))
+                    .font_family(theme.fonts.body.clone())
+                    .child(
+                        dialog_header(cx)
+                            .child(dialog_title("modal.update.title", cx).child(title))
+                            .child(dialog_description("modal.update.desc", cx).child(desc)),
                     )
-                })
-                .when_some(state.update_download_progress, |el, prog| {
-                    el.child(
+                    .when_some(state.available_update.as_ref(), |el, info| {
+                        el.child(
+                            div()
+                                .p(px(12.0))
+                                .rounded(radius::CONTROL)
+                                .bg(surface::quiet_panel(theme))
+                                .text_size(typo::UI_BODY)
+                                .line_height(typo::UI_BODY_LH)
+                                .text_color(theme.colors.foreground)
+                                .child(info.notes.clone()),
+                        )
+                    })
+                    .when_some(state.update_download_progress, |el, prog| {
+                        el.child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(px(6.0))
+                                .child(
+                                    Progress::new("modal.update.progress")
+                                        .value(f64::from(prog) * 100.0),
+                                )
+                                .child(
+                                    div()
+                                        .text_size(typo::CAPTION)
+                                        .text_color(theme.colors.muted_foreground)
+                                        .child(format!("下载进度 {:.0}%", prog * 100.0)),
+                                ),
+                        )
+                    })
+                    .child(
                         div()
+                            .w_full()
+                            .pt(px(8.0))
                             .flex()
-                            .flex_col()
-                            .gap(px(6.0))
+                            .items_center()
+                            .justify_end()
+                            .gap(px(8.0))
                             .child(
-                                Progress::new("modal.update.progress")
-                                    .value(f64::from(prog) * 100.0),
+                                Button::new("modal.update.later")
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    .label("稍后")
+                                    .on_click(move |_, _, _| d_upd_later(UiAction::CloseModal)),
                             )
                             .child(
-                                div()
-                                    .text_size(px(12.0))
-                                    .text_color(theme.colors.muted_foreground)
-                                    .child(format!("下载进度 {:.0}%", prog * 100.0)),
+                                Button::new("modal.update.check")
+                                    .variant(ButtonVariant::Default)
+                                    .size(ButtonSize::Sm)
+                                    .label("立即检查更新")
+                                    .on_click(move |_, _, _| d_upd_check(UiAction::CheckUpdates)),
                             ),
-                    )
-                })
-                .child(
-                    div()
-                        .w_full()
-                        .pt(px(6.0))
-                        .flex()
-                        .items_center()
-                        .justify_end()
-                        .gap(px(8.0))
-                        .child(
-                            Button::new("modal.update.later")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .label("稍后")
-                                .on_click(move |_, _, _| d_upd_later(UiAction::CloseModal)),
-                        )
-                        .child(
-                            Button::new("modal.update.check")
-                                .variant(ButtonVariant::Default)
-                                .size(ButtonSize::Sm)
-                                .label("立即检查更新")
-                                .on_click(move |_, _, _| d_upd_check(UiAction::CheckUpdates)),
-                        ),
-                )
+                    ),
+            )
         },
         window,
         cx,
@@ -299,121 +312,125 @@ pub fn render_modals(
                 None => ("未知工具".to_string(), "当前暂无待确认操作".to_string()),
             };
 
-            dialog_popup("modal.approval.popup", "工具执行权限确认", cx)
-                .w(px(500.0))
-                .max_w(px(500.0))
-                .border_1()
-                .border_color(theme.colors.border)
-                .child(
-                    dialog_header(cx)
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(8.0))
-                                .child(
-                                    lucide(LucideIcon::ShieldAlert)
-                                        .size(px(18.0))
-                                        .text_color(theme.colors.warning),
-                                )
-                                .child(
-                                    dialog_title("modal.approval.title", cx)
-                                        .child("工具执行权限确认"),
-                                ),
-                        )
-                        .child(dialog_description("modal.approval.desc", cx).child(format!(
-                            "Agent 请求执行以下受控操作（工具：{tool_name}），请确认是否授权："
-                        ))),
-                )
-                .child(
-                    div()
-                        .p(px(12.0))
-                        .rounded(px(8.0))
-                        .border_1()
-                        .border_color(theme.colors.border)
-                        .bg(theme.colors.muted.opacity(0.6))
-                        .flex()
-                        .flex_col()
-                        .gap(px(6.0))
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .justify_between()
-                                .child(
-                                    div()
-                                        .text_size(px(12.0))
-                                        .font_weight(FontWeight::SEMIBOLD)
-                                        .text_color(theme.colors.muted_foreground)
-                                        .child("命令 / 参数预览"),
-                                )
-                                .child(Badge::new(tool_name).variant(BadgeVariant::Outline)),
-                        )
-                        .child(
-                            div()
-                                .font_family(theme.fonts.mono.clone())
-                                .text_size(px(12.5))
-                                .text_color(theme.colors.foreground)
-                                .child(cmd_preview),
-                        ),
-                )
-                .child(
-                    div()
-                        .w_full()
-                        .pt(px(6.0))
-                        .flex()
-                        .items_center()
-                        .justify_end()
-                        .gap(px(8.0))
-                        .child(
-                            Button::new("modal.approval.deny")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .label("拒绝")
-                                .on_click(move |_, _, _| {
-                                    if let (Some(t), Some(a)) = (&tid_deny, &aid_deny) {
-                                        d_app_deny(UiAction::ResolveApproval {
-                                            thread_id: t.clone(),
-                                            approval_id: a.clone(),
-                                            decision: PermissionDecision::Deny,
-                                        });
-                                    }
-                                    d_app_deny(UiAction::CloseModal);
-                                }),
-                        )
-                        .child(
-                            Button::new("modal.approval.session")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
-                                .label("本会话允许")
-                                .on_click(move |_, _, _| {
-                                    if let (Some(t), Some(a)) = (&tid_sess, &aid_sess) {
-                                        d_app_session(UiAction::ResolveApproval {
-                                            thread_id: t.clone(),
-                                            approval_id: a.clone(),
-                                            decision: PermissionDecision::AllowSession,
-                                        });
-                                    }
-                                    d_app_session(UiAction::CloseModal);
-                                }),
-                        )
-                        .child(
-                            Button::new("modal.approval.once")
-                                .variant(ButtonVariant::Default)
-                                .size(ButtonSize::Sm)
-                                .label("仅本次允许")
-                                .on_click(move |_, _, _| {
-                                    if let (Some(t), Some(a)) = (&tid_once, &aid_once) {
-                                        d_app_once(UiAction::ResolveApproval {
-                                            thread_id: t.clone(),
-                                            approval_id: a.clone(),
-                                            decision: PermissionDecision::AllowOnce,
-                                        });
-                                    }
-                                    d_app_once(UiAction::CloseModal);
-                                }),
-                        ),
-                )
+            div().px(px(28.0)).py(px(24.0)).child(
+                dialog_popup("modal.approval.popup", "工具执行权限确认", cx)
+                    .w(px(500.0))
+                    .max_w(px(500.0))
+                    .rounded(radius::MODAL)
+                    .border_1()
+                    .border_color(theme.colors.border)
+                    .shadow(elevation::for_level3(theme))
+                    .font_family(theme.fonts.body.clone())
+                    .child(
+                        dialog_header(cx)
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(8.0))
+                                    .child(
+                                        lucide(LucideIcon::ShieldAlert)
+                                            .size(px(18.0))
+                                            .text_color(theme.colors.warning),
+                                    )
+                                    .child(
+                                        dialog_title("modal.approval.title", cx)
+                                            .child("工具执行权限确认"),
+                                    ),
+                            )
+                            .child(dialog_description("modal.approval.desc", cx).child(format!(
+                                "Agent 请求执行以下受控操作（工具：{tool_name}），请确认是否授权："
+                            ))),
+                    )
+                    .child(
+                        div()
+                            .p(px(12.0))
+                            .rounded(radius::CONTROL)
+                            .bg(surface::quiet_panel(theme))
+                            .flex()
+                            .flex_col()
+                            .gap(px(6.0))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .justify_between()
+                                    .child(
+                                        div()
+                                            .text_size(typo::CAPTION)
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(theme.colors.muted_foreground)
+                                            .child("命令 / 参数预览"),
+                                    )
+                                    .child(Badge::new(tool_name).variant(BadgeVariant::Outline)),
+                            )
+                            .child(
+                                div()
+                                    .font_family(theme.fonts.mono.clone())
+                                    .text_size(typo::CODE)
+                                    .line_height(typo::CODE_LH)
+                                    .text_color(theme.colors.foreground)
+                                    .child(cmd_preview),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .w_full()
+                            .pt(px(8.0))
+                            .flex()
+                            .items_center()
+                            .justify_end()
+                            .gap(px(8.0))
+                            .child(
+                                Button::new("modal.approval.deny")
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    .label("拒绝")
+                                    .on_click(move |_, _, _| {
+                                        if let (Some(t), Some(a)) = (&tid_deny, &aid_deny) {
+                                            d_app_deny(UiAction::ResolveApproval {
+                                                thread_id: t.clone(),
+                                                approval_id: a.clone(),
+                                                decision: PermissionDecision::Deny,
+                                            });
+                                        }
+                                        d_app_deny(UiAction::CloseModal);
+                                    }),
+                            )
+                            .child(
+                                Button::new("modal.approval.session")
+                                    .variant(ButtonVariant::Secondary)
+                                    .size(ButtonSize::Sm)
+                                    .label("本会话允许")
+                                    .on_click(move |_, _, _| {
+                                        if let (Some(t), Some(a)) = (&tid_sess, &aid_sess) {
+                                            d_app_session(UiAction::ResolveApproval {
+                                                thread_id: t.clone(),
+                                                approval_id: a.clone(),
+                                                decision: PermissionDecision::AllowSession,
+                                            });
+                                        }
+                                        d_app_session(UiAction::CloseModal);
+                                    }),
+                            )
+                            .child(
+                                Button::new("modal.approval.once")
+                                    .variant(ButtonVariant::Default)
+                                    .size(ButtonSize::Sm)
+                                    .label("仅本次允许")
+                                    .on_click(move |_, _, _| {
+                                        if let (Some(t), Some(a)) = (&tid_once, &aid_once) {
+                                            d_app_once(UiAction::ResolveApproval {
+                                                thread_id: t.clone(),
+                                                approval_id: a.clone(),
+                                                decision: PermissionDecision::AllowOnce,
+                                            });
+                                        }
+                                        d_app_once(UiAction::CloseModal);
+                                    }),
+                            ),
+                    ),
+            )
         },
         window,
         cx,

@@ -464,6 +464,9 @@ pub enum UiAction {
         thread_id: ThreadId,
         prompt: String,
     },
+    StartQuickThread {
+        prompt: String,
+    },
     CancelTurn(ThreadId),
     CompactContext(ThreadId),
     ResolveApproval {

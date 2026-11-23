@@ -2,227 +2,232 @@ use std::sync::Arc;
 
 use gpui_icons::{LucideIcon, lucide};
 use gpui_kit::{
-    App, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
-    StatefulInteractiveElement as _, Styled, div, prelude::FluentBuilder as _, px,
+    App, Entity, FontWeight, InteractiveElement as _, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement as _, Styled, div, px,
 };
-use gpuicn::badge::{Badge, BadgeVariant};
-use gpuicn::empty::{Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle};
-use gpuicn::kbd::Kbd;
+use gpuicn::button::{Button, ButtonSize, ButtonVariant};
+use gpuicn::composer::{Composer, ComposerState};
+use gpuicn::select::{Select, SelectState};
 use gpuicn::theme::UiTheme;
 
 use crate::components::fox_brand_mark;
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, SettingsSection, UiAction};
+use crate::tokens::{elevation, radius, space, typo};
 
-#[allow(clippy::too_many_arguments)]
-fn quick_action_card(
+fn quick_pill(
     id: &'static str,
     icon: LucideIcon,
-    title: &'static str,
-    description: impl Into<SharedString>,
-    shortcut: Option<&'static str>,
+    label: impl Into<SharedString>,
     theme: &UiTheme,
     on_click: impl Fn(&gpui_kit::ClickEvent, &mut gpui_kit::Window, &mut App) + 'static,
 ) -> impl IntoElement {
-    div()
-        .id(id)
-        .w_full()
-        .p(px(16.0))
-        .rounded(px(10.0))
-        .bg(theme.colors.card)
-        .border_1()
-        .border_color(theme.colors.border)
-        .cursor_pointer()
-        .hover(|s| {
-            s.border_color(theme.colors.primary.opacity(0.6))
-                .bg(theme.colors.accent.opacity(0.35))
-        })
+    Button::new(id)
+        .variant(ButtonVariant::Outline)
+        .size(ButtonSize::Sm)
         .on_click(on_click)
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
         .child(
             div()
                 .flex()
                 .items_center()
-                .justify_between()
+                .gap(px(6.0))
+                .child(
+                    lucide(icon)
+                        .size(px(14.0))
+                        .text_color(theme.colors.muted_foreground),
+                )
                 .child(
                     div()
-                        .w(px(32.0))
-                        .h(px(32.0))
-                        .rounded(px(8.0))
-                        .bg(theme.colors.accent)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child(lucide(icon).size(px(16.0)).text_color(theme.colors.primary)),
-                )
-                .when_some(shortcut, |el, sc| el.child(Kbd::new(sc))),
-        )
-        .child(
-            div()
-                .text_size(px(14.0))
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(theme.colors.foreground)
-                .text_left()
-                .child(title),
-        )
-        .child(
-            div()
-                .text_size(px(13.0))
-                .text_color(theme.colors.muted_foreground)
-                .text_left()
-                .line_height(px(19.0))
-                .child(description.into()),
+                        .text_size(typo::CAPTION)
+                        .text_color(theme.colors.foreground)
+                        .child(label.into()),
+                ),
         )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_welcome(
     state: &AppUiState,
+    composer: &Entity<ComposerState>,
+    provider_select: &Entity<SelectState>,
+    mode_select: &Entity<SelectState>,
     dispatcher: &ActionDispatcher,
     theme: &UiTheme,
-    _cx: &App,
+    cx: &App,
 ) -> impl IntoElement {
-    let available_providers: Vec<_> = state
+    let available_count = state
         .provider_statuses
         .iter()
         .filter(|p| p.install_state == lingxi_domain::ProviderInstallState::Installed)
-        .collect();
-    let total_providers = state.provider_statuses.len().max(12);
+        .count();
+    let total_count = state.provider_statuses.len().max(12);
 
+    let draft = composer.read(cx).value(cx).to_string();
+    let can_send = !draft.trim().is_empty();
+    let composer_handle = composer.clone();
+
+    let d_send = Arc::clone(dispatcher);
     let d_open = Arc::clone(dispatcher);
-    let d_new = Arc::clone(dispatcher);
     let d_import = Arc::clone(dispatcher);
+    let d_cmd = Arc::clone(dispatcher);
     let d_providers = Arc::clone(dispatcher);
+    let d_providers_footer = Arc::clone(dispatcher);
 
-    let first_project_id = state.projects.first().map(|p| p.id.clone());
-
-    let legacy_desc: SharedString = match &state.legacy_db_path {
-        Some(path) => format!("检测到原版数据库：{path}（仅只读导入，绝不修改原库）").into(),
-        None => "从 ~/.lingxi-t3 只读迁移工作区与历史会话（自动备份）".into(),
+    let secondary_line: SharedString = match &state.legacy_db_path {
+        Some(_) => {
+            format!("本机已探测 {available_count}/{total_count} 个智能体 · 检测到原版 LingXi T3 数据可只读迁移")
+                .into()
+        }
+        None => format!("本机已探测 {available_count}/{total_count} 个智能体 · 点击配置 Provider").into(),
     };
-
-    let provider_desc: SharedString = format!(
-        "已检测到 {} / {} 个本地智能体 CLI，支持自定义 ACP 命令",
-        available_providers.len(),
-        total_providers
-    )
-    .into();
 
     div()
         .flex_1()
         .min_w_0()
         .min_h_0()
         .flex()
+        .flex_col()
         .items_center()
         .justify_center()
-        .p(px(28.0))
+        .px(px(32.0))
+        .py(px(28.0))
         .child(
-            Empty::new()
-                .max_w(px(720.0))
-                .header(
-                    EmptyHeader::new()
-                        .media(EmptyMedia::new().child(fox_brand_mark(48.0, theme)))
-                        .title(EmptyTitle::new().child("欢迎使用 LingXi T3 Native"))
-                        .description(EmptyDescription::new().child(
-                            "基于 Rust + GPUI 构建的原生多智能体编程工作台。选择左侧工作区会话，或从下方快捷入口开始。",
-                        )),
-                )
-                .content(
-                    EmptyContent::new()
-                        .w_full()
-                        .max_w(px(640.0))
-                        .gap(px(16.0))
+            div()
+                .w_full()
+                .max_w(space::WELCOME_COMPOSER_MAX_WIDTH)
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(22.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .gap(px(12.0))
+                        .child(fox_brand_mark(44.0, theme))
                         .child(
                             div()
-                                .w_full()
-                                .grid()
-                                .grid_cols(2)
-                                .gap(px(12.0))
-                                .child(quick_action_card(
-                                    "welcome.open_project",
-                                    LucideIcon::FolderOpen,
-                                    "打开本地工作区",
-                                    "添加本地 Git 仓库或项目文件夹到工作区树",
-                                    None,
-                                    theme,
-                                    move |_, _, _| d_open(UiAction::OpenWorkspaceDialog),
-                                ))
-                                .child(quick_action_card(
-                                    "welcome.new_thread",
-                                    LucideIcon::MessageSquarePlus,
-                                    "新建 Agent 会话",
-                                    "立即启动一个新的多智能体协作会话",
-                                    Some("⌘N"),
-                                    theme,
-                                    move |_, _, _| {
-                                        if let Some(pid) = &first_project_id {
-                                            d_new(UiAction::CreateThread {
-                                                project_id: pid.clone(),
-                                                worktree: false,
-                                            });
-                                        } else {
-                                            d_new(UiAction::OpenWorkspaceDialog);
-                                        }
-                                    },
-                                ))
-                                .child(quick_action_card(
-                                    "welcome.import",
-                                    LucideIcon::DatabaseBackup,
-                                    "只读导入原版数据",
-                                    legacy_desc,
-                                    None,
-                                    theme,
-                                    move |_, _, _| {
-                                        d_import(UiAction::OpenSettings(
-                                            SettingsSection::LegacyImport,
-                                        ))
-                                    },
-                                ))
-                                .child(quick_action_card(
-                                    "welcome.providers",
-                                    LucideIcon::Cpu,
-                                    "配置智能体 Provider",
-                                    provider_desc,
-                                    Some("⌘,"),
-                                    theme,
-                                    move |_, _, _| {
-                                        d_providers(UiAction::OpenSettings(
-                                            SettingsSection::Providers,
-                                        ))
-                                    },
-                                )),
+                                .text_size(typo::HERO_TITLE)
+                                .line_height(typo::HERO_TITLE_LH)
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.colors.foreground)
+                                .text_center()
+                                .child("今天想一起构建什么？"),
                         )
-                        .when(!available_providers.is_empty(), |el| {
-                            el.child(
+                        .child(
+                            div()
+                                .text_size(typo::UI_BODY)
+                                .line_height(typo::UI_BODY_LH)
+                                .text_color(theme.colors.muted_foreground)
+                                .text_center()
+                                .child("输入任务立即开始对话，或打开本地工作区继续协作"),
+                        ),
+                )
+                .child(
+                    div().w_full().child(
+                        Composer::new(composer)
+                            .w_full()
+                            .rounded(radius::COMPOSER)
+                            .bg(theme.colors.card)
+                            .border_1()
+                            .border_color(theme.colors.border)
+                            .shadow(elevation::for_level1(theme))
+                            .p(px(6.0))
+                            .child(
                                 div()
                                     .w_full()
-                                    .pt(px(8.0))
                                     .flex()
-                                    .flex_wrap()
                                     .items_center()
-                                    .justify_center()
-                                    .gap(px(6.0))
+                                    .justify_between()
+                                    .gap(px(8.0))
+                                    .pt(px(6.0))
                                     .child(
                                         div()
-                                            .text_size(px(12.0))
-                                            .text_color(theme.colors.muted_foreground)
-                                            .mr(px(4.0))
-                                            .child("本机已就绪:"),
+                                            .flex()
+                                            .items_center()
+                                            .gap(px(6.0))
+                                            .child(Select::new(provider_select).w(px(148.0)))
+                                            .child(Select::new(mode_select).w(px(138.0))),
                                     )
-                                    .children(available_providers.into_iter().take(6).map(|p| {
-                                        let label = match &p.version {
-                                            Some(v) => {
-                                                format!("{} ({v})", p.kind.display_name())
-                                            }
-                                            None => p.kind.display_name().to_string(),
-                                        };
-                                        Badge::new(label)
-                                            .variant(BadgeVariant::Secondary)
-                                            .icon(LucideIcon::Check)
-                                    })),
-                            )
-                        }),
+                                    .child(
+                                        Button::new("welcome.composer.send")
+                                            .variant(ButtonVariant::Default)
+                                            .size(ButtonSize::IconSm)
+                                            .aria_label("开始新会话")
+                                            .disabled(!can_send)
+                                            .on_click(move |_, window, cx| {
+                                                let text =
+                                                    composer_handle.read(cx).value(cx).to_string();
+                                                if text.trim().is_empty() {
+                                                    return;
+                                                }
+                                                composer_handle.update(cx, |c, cx| {
+                                                    c.set_value("", window, cx);
+                                                });
+                                                d_send(UiAction::StartQuickThread { prompt: text });
+                                            })
+                                            .child(
+                                                lucide(LucideIcon::ArrowUp)
+                                                    .size(px(15.0))
+                                                    .text_color(theme.colors.primary_foreground),
+                                            ),
+                                    ),
+                            ),
+                    ),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_wrap()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(8.0))
+                        .child(quick_pill(
+                            "welcome.pill.open",
+                            LucideIcon::FolderOpen,
+                            "打开本地工作区",
+                            theme,
+                            move |_, _, _| d_open(UiAction::OpenWorkspaceDialog),
+                        ))
+                        .child(quick_pill(
+                            "welcome.pill.import",
+                            LucideIcon::DatabaseBackup,
+                            "只读导入原版",
+                            theme,
+                            move |_, _, _| {
+                                d_import(UiAction::OpenSettings(SettingsSection::LegacyImport))
+                            },
+                        ))
+                        .child(quick_pill(
+                            "welcome.pill.cmd",
+                            LucideIcon::Search,
+                            "命令面板 ⌘K",
+                            theme,
+                            move |_, _, _| d_cmd(UiAction::OpenCommandPalette),
+                        ))
+                        .child(quick_pill(
+                            "welcome.pill.providers",
+                            LucideIcon::SlidersHorizontal,
+                            "配置 Provider",
+                            theme,
+                            move |_, _, _| {
+                                d_providers(UiAction::OpenSettings(SettingsSection::Providers))
+                            },
+                        )),
+                )
+                .child(
+                    div()
+                        .id("welcome.status_link")
+                        .pt(px(6.0))
+                        .cursor_pointer()
+                        .text_size(typo::CAPTION)
+                        .text_color(theme.colors.muted_foreground)
+                        .hover(|s| s.text_color(theme.colors.foreground))
+                        .on_click(move |_, _, _| {
+                            d_providers_footer(UiAction::OpenSettings(SettingsSection::Providers))
+                        })
+                        .child(secondary_line),
                 ),
         )
 }

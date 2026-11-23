@@ -17,20 +17,20 @@ use gpuicn::switch::Switch;
 use gpuicn::theme::UiTheme;
 use lingxi_domain::ThemeAppearance;
 
+use crate::fonts::has_misans_available;
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, SettingsSection, UiAction};
+use crate::tokens::{elevation, radius, space, typo};
 
-fn settings_card(theme: &UiTheme) -> gpui_kit::Div {
+fn section_heading(title: &'static str, theme: &UiTheme) -> impl IntoElement {
     div()
-        .w_full()
-        .p(px(16.0))
-        .rounded(px(10.0))
-        .border_1()
-        .border_color(theme.colors.border)
-        .bg(theme.colors.card)
-        .flex()
-        .flex_col()
-        .gap(px(12.0))
+        .pt(px(4.0))
+        .pb(px(6.0))
+        .text_size(typo::SECTION_TITLE)
+        .line_height(typo::SECTION_TITLE_LH)
+        .font_weight(FontWeight::MEDIUM)
+        .text_color(theme.colors.foreground)
+        .child(title)
 }
 
 fn setting_row(
@@ -41,6 +41,7 @@ fn setting_row(
 ) -> impl IntoElement {
     div()
         .w_full()
+        .py(px(12.0))
         .flex()
         .items_center()
         .justify_between()
@@ -54,14 +55,16 @@ fn setting_row(
                 .gap(px(3.0))
                 .child(
                     div()
-                        .text_size(px(14.0))
+                        .text_size(typo::UI_BODY)
+                        .line_height(typo::UI_BODY_LH)
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.colors.foreground)
                         .child(title.into()),
                 )
                 .child(
                     div()
-                        .text_size(px(12.5))
+                        .text_size(typo::CAPTION)
+                        .line_height(typo::CAPTION_LH)
                         .text_color(theme.colors.muted_foreground)
                         .child(description.into()),
                 ),
@@ -81,12 +84,12 @@ pub fn render_settings_popup_content(
     cx: &App,
 ) -> impl IntoElement {
     let viewport = window.viewport_size();
-    let modal_w = (viewport.width - px(48.0)).clamp(px(640.0), px(880.0));
-    let modal_h = (viewport.height - px(64.0)).clamp(px(460.0), px(640.0));
+    let modal_w = (viewport.width - px(56.0)).clamp(px(620.0), px(780.0));
+    let modal_h = (viewport.height - px(120.0)).clamp(px(400.0), px(540.0));
     let nav_w = if viewport.width < px(1080.0) {
-        px(176.0)
+        px(168.0)
     } else {
-        px(210.0)
+        px(196.0)
     };
 
     let nav_items: [(SettingsSection, LucideIcon, &str); 8] = [
@@ -129,10 +132,10 @@ pub fn render_settings_popup_content(
         .content_padding(px(10.0))
         .header(
             div()
-                .px(px(6.0))
-                .py(px(4.0))
-                .text_size(px(14.0))
-                .font_weight(FontWeight::SEMIBOLD)
+                .px(px(8.0))
+                .py(px(6.0))
+                .text_size(typo::SECTION_TITLE)
+                .font_weight(FontWeight::MEDIUM)
                 .text_color(theme.colors.sidebar_foreground)
                 .child("设置中心"),
         )
@@ -145,7 +148,8 @@ pub fn render_settings_popup_content(
         let d_sec = Arc::clone(dispatcher);
         nav = nav.child(
             SidebarItem::new(("settings.nav", idx), label)
-                .size(SidebarItemSize::Small)
+                .size(SidebarItemSize::Default)
+                .h(space::SIDEBAR_ROW_HEIGHT)
                 .selected(state.settings_section == section)
                 .icon(lucide(icon).size(px(15.0)))
                 .on_activate(move |_, _, _| d_sec(UiAction::OpenSettings(section))),
@@ -153,8 +157,8 @@ pub fn render_settings_popup_content(
     }
 
     let header = div()
-        .h(px(52.0))
-        .px(px(20.0))
+        .h(px(48.0))
+        .px(px(24.0))
         .border_b_1()
         .border_color(theme.colors.border)
         .flex_shrink_0()
@@ -168,7 +172,7 @@ pub fn render_settings_popup_content(
                 .gap(px(8.0))
                 .child(
                     div()
-                        .text_size(px(13.0))
+                        .text_size(typo::CAPTION)
                         .text_color(theme.colors.muted_foreground)
                         .child("设置"),
                 )
@@ -179,8 +183,8 @@ pub fn render_settings_popup_content(
                 )
                 .child(
                     div()
-                        .text_size(px(15.0))
-                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(typo::SECTION_TITLE)
+                        .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.colors.foreground)
                         .child(state.settings_section.label()),
                 ),
@@ -225,10 +229,12 @@ pub fn render_settings_popup_content(
         .h(modal_h)
         .flex()
         .overflow_hidden()
-        .rounded(px(12.0))
+        .rounded(radius::MODAL)
         .border_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.background)
+        .shadow(elevation::for_level3(theme))
+        .font_family(theme.fonts.body.clone())
         .child(nav)
         .child(
             div()
@@ -246,10 +252,10 @@ pub fn render_settings_popup_content(
                         .min_h_0()
                         .child(
                             div()
-                                .p(px(20.0))
+                                .px(px(24.0))
+                                .py(px(18.0))
                                 .flex()
                                 .flex_col()
-                                .gap(px(14.0))
                                 .child(section_body),
                         ),
                 ),
@@ -260,43 +266,39 @@ fn render_general(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
     div()
         .flex()
         .flex_col()
-        .gap(px(14.0))
-        .child(
-            settings_card(theme)
-                .child(setting_row(
-                    "界面语言",
-                    "默认优先简体中文与技术术语混排",
-                    Badge::new(state.settings.language.clone()).variant(BadgeVariant::Secondary),
-                    theme,
-                ))
-                .child(Separator::new("set.gen.sep1").horizontal())
-                .child(setting_row(
-                    "本地状态目录",
-                    "独立 SQLite WAL 数据库与运行时配置文件位置",
-                    Badge::new("~/.lingxi-t3-native").variant(BadgeVariant::Outline),
-                    theme,
-                ))
-                .child(Separator::new("set.gen.sep2").horizontal())
-                .child(setting_row(
-                    "异常崩溃恢复",
-                    "启动时自动检测未完成 Turn 并重置为可继续状态",
-                    Badge::new("已启用").variant(BadgeVariant::Secondary),
-                    theme,
-                )),
-        )
-        .child(
-            settings_card(theme).child(setting_row(
-                "已加载工作区与会话",
-                "当前 SQLite 持久化状态统计",
-                Badge::new(format!(
-                    "{} 工作区 · {} 会话",
-                    state.projects.len(),
-                    state.threads.len()
-                ))
-                .variant(BadgeVariant::Outline),
-                theme,
-            )),
-        )
+        .child(section_heading("常规偏好", theme))
+        .child(setting_row(
+            "界面语言",
+            "默认优先简体中文与技术术语混排",
+            Badge::new(state.settings.language.clone()).variant(BadgeVariant::Secondary),
+            theme,
+        ))
+        .child(Separator::new("set.gen.sep1").horizontal())
+        .child(setting_row(
+            "本地状态目录",
+            "独立 SQLite WAL 数据库与运行时配置文件位置",
+            Badge::new("~/.lingxi-t3-native").variant(BadgeVariant::Outline),
+            theme,
+        ))
+        .child(Separator::new("set.gen.sep2").horizontal())
+        .child(setting_row(
+            "异常崩溃恢复",
+            "启动时自动检测未完成 Turn 并重置为可继续状态",
+            Badge::new("已启用").variant(BadgeVariant::Secondary),
+            theme,
+        ))
+        .child(Separator::new("set.gen.sep3").horizontal())
+        .child(setting_row(
+            "已加载工作区与会话",
+            "当前 SQLite 持久化状态统计",
+            Badge::new(format!(
+                "{} 工作区 · {} 会话",
+                state.projects.len(),
+                state.threads.len()
+            ))
+            .variant(BadgeVariant::Outline),
+            theme,
+        ))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -313,8 +315,8 @@ fn appearance_card(
     div()
         .id(id)
         .flex_1()
-        .p(px(14.0))
-        .rounded(px(10.0))
+        .p(px(12.0))
+        .rounded(radius::CARD)
         .border_1()
         .border_color(if selected {
             theme.colors.primary
@@ -322,7 +324,7 @@ fn appearance_card(
             theme.colors.border
         })
         .bg(if selected {
-            theme.colors.accent.opacity(0.4)
+            theme.colors.accent.opacity(0.45)
         } else {
             theme.colors.card
         })
@@ -330,11 +332,11 @@ fn appearance_card(
         .on_click(on_click)
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(8.0))
         .child(
             div()
-                .h(px(54.0))
-                .rounded(px(6.0))
+                .h(px(48.0))
+                .rounded(radius::CONTROL)
                 .border_1()
                 .border_color(theme.colors.border)
                 .bg(preview_bg)
@@ -344,15 +346,15 @@ fn appearance_card(
                 .justify_between()
                 .child(
                     div()
-                        .w(px(36.0))
-                        .h(px(6.0))
+                        .w(px(32.0))
+                        .h(px(5.0))
                         .rounded_full()
                         .bg(theme.colors.primary),
                 )
                 .child(
                     div()
-                        .w(px(72.0))
-                        .h(px(6.0))
+                        .w(px(64.0))
+                        .h(px(5.0))
                         .rounded_full()
                         .bg(preview_fg.opacity(0.28)),
                 ),
@@ -364,8 +366,8 @@ fn appearance_card(
                 .justify_between()
                 .child(
                     div()
-                        .text_size(px(13.5))
-                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(typo::UI_BODY)
+                        .font_weight(FontWeight::MEDIUM)
                         .child(title),
                 )
                 .when(selected, |el| {
@@ -374,7 +376,7 @@ fn appearance_card(
         )
         .child(
             div()
-                .text_size(px(12.0))
+                .text_size(typo::CAPTION)
                 .text_color(theme.colors.muted_foreground)
                 .child(subtitle),
         )
@@ -393,69 +395,59 @@ fn render_appearance(
     div()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .child(section_heading("主题模式", theme))
         .child(
-            settings_card(theme)
-                .child(
-                    div()
-                        .text_size(px(14.0))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .child("主题模式"),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .gap(px(12.0))
-                        .child(appearance_card(
-                            "set.app.light",
-                            "奶白浅色",
-                            "Warm Cream + 狐橙高亮",
-                            current == ThemeAppearance::Light,
-                            gpui_kit::rgb(0xFAF6F0),
-                            gpui_kit::rgb(0x181512),
-                            theme,
-                            move |_, _, _| d_light(UiAction::SetAppearance(ThemeAppearance::Light)),
-                        ))
-                        .child(appearance_card(
-                            "set.app.dark",
-                            "炭黑深色",
-                            "Deep Charcoal + 暖白文字",
-                            current == ThemeAppearance::Dark,
-                            gpui_kit::rgb(0x121110),
-                            gpui_kit::rgb(0xF5EFE6),
-                            theme,
-                            move |_, _, _| d_dark(UiAction::SetAppearance(ThemeAppearance::Dark)),
-                        ))
-                        .child(appearance_card(
-                            "set.app.system",
-                            "跟随系统",
-                            "自动同步 macOS 外观",
-                            current == ThemeAppearance::System,
-                            gpui_kit::rgb(0x282420),
-                            gpui_kit::rgb(0xFAF6F0),
-                            theme,
-                            move |_, _, _| d_sys(UiAction::SetAppearance(ThemeAppearance::System)),
-                        )),
-                ),
-        )
-        .child(
-            settings_card(theme)
-                .child(setting_row(
-                    "视觉规范",
-                    "严格实色表面、1px 细线边框、Geist + PingFang SC 排版、零毛玻璃或动态背景",
-                    Badge::new("Coss UI / Nova").variant(BadgeVariant::Secondary),
+            div()
+                .pb(px(14.0))
+                .flex()
+                .gap(px(12.0))
+                .child(appearance_card(
+                    "set.app.light",
+                    "奶白浅色",
+                    "Warm Cream + 狐橙高亮",
+                    current == ThemeAppearance::Light,
+                    gpui_kit::rgb(0xFAF7F2),
+                    gpui_kit::rgb(0x1F1B18),
                     theme,
+                    move |_, _, _| d_light(UiAction::SetAppearance(ThemeAppearance::Light)),
                 ))
-                .child(Separator::new("set.app.sep").horizontal())
-                .child(setting_row(
-                    "减弱动态效果",
-                    "保持桌面端克制稳定的过渡表现",
-                    Switch::new("set.app.reduced_motion")
-                        .checked(true)
-                        .read_only(true),
+                .child(appearance_card(
+                    "set.app.dark",
+                    "炭黑深色",
+                    "Layered Charcoal + 暖白文字",
+                    current == ThemeAppearance::Dark,
+                    gpui_kit::rgb(0x1A1816),
+                    gpui_kit::rgb(0xF2ECE3),
                     theme,
+                    move |_, _, _| d_dark(UiAction::SetAppearance(ThemeAppearance::Dark)),
+                ))
+                .child(appearance_card(
+                    "set.app.system",
+                    "跟随系统",
+                    "自动同步 macOS 外观",
+                    current == ThemeAppearance::System,
+                    gpui_kit::rgb(0x282420),
+                    gpui_kit::rgb(0xFAF7F2),
+                    theme,
+                    move |_, _, _| d_sys(UiAction::SetAppearance(ThemeAppearance::System)),
                 )),
         )
+        .child(Separator::new("set.app.sep1").horizontal())
+        .child(setting_row(
+            "字体排版栈",
+            "英文/数字 Nunito Sans · 简体中文 MiSans · 代码 JetBrains Mono",
+            Badge::new("3-Font Stack").variant(BadgeVariant::Secondary),
+            theme,
+        ))
+        .child(Separator::new("set.app.sep2").horizontal())
+        .child(setting_row(
+            "减弱动态效果",
+            "保持桌面端克制稳定的过渡表现",
+            Switch::new("set.app.reduced_motion")
+                .checked(true)
+                .read_only(true),
+            theme,
+        ))
 }
 
 fn render_providers(
@@ -463,78 +455,24 @@ fn render_providers(
     custom_acp_input: &Entity<InputState>,
     dispatcher: &ActionDispatcher,
     theme: &UiTheme,
-    cx: &App,
+    _cx: &App,
 ) -> impl IntoElement {
     let d_save = Arc::clone(dispatcher);
     let input_handle = custom_acp_input.clone();
 
-    let mut list_card = settings_card(theme).child(
-        div()
-            .flex()
-            .items_center()
-            .justify_between()
-            .child(
-                div()
-                    .text_size(px(14.0))
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .child("本地已探测 Provider（12 路原生驱动）"),
-            )
-            .child(
-                Badge::new(format!(
-                    "{} / {} 可用",
-                    state
-                        .provider_statuses
-                        .iter()
-                        .filter(
-                            |p| p.install_state == lingxi_domain::ProviderInstallState::Installed
-                        )
-                        .count(),
-                    state.provider_statuses.len()
-                ))
-                .variant(BadgeVariant::Secondary),
-            ),
-    );
-
-    for (idx, p) in state.provider_statuses.iter().enumerate() {
-        if idx > 0 {
-            list_card = list_card.child(Separator::new(("set.prov.sep", idx)).horizontal());
-        }
-        let installed = p.install_state == lingxi_domain::ProviderInstallState::Installed;
-        let detail: SharedString = match (&p.version, &p.binary_path) {
-            (Some(v), Some(path)) => format!("{v} · {path}").into(),
-            (Some(v), None) => v.clone().into(),
-            (None, Some(path)) => path.clone().into(),
-            (None, None) => "未在 PATH 或默认位置检测到可执行文件".into(),
-        };
-        list_card = list_card.child(setting_row(
-            p.kind.display_name(),
-            detail,
-            Badge::new(if installed { "已就绪" } else { "未安装" }).variant(if installed {
-                BadgeVariant::Secondary
-            } else {
-                BadgeVariant::Outline
-            }),
-            theme,
-        ));
-    }
-
-    let _ = cx;
-
-    div()
+    let mut root = div()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .child(section_heading("自定义 ACP Agent 启动命令", theme))
         .child(
-            settings_card(theme)
+            div()
+                .pb(px(14.0))
+                .flex()
+                .flex_col()
+                .gap(px(8.0))
                 .child(
                     div()
-                        .text_size(px(14.0))
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .child("自定义 ACP Agent 启动命令"),
-                )
-                .child(
-                    div()
-                        .text_size(px(12.5))
+                        .text_size(typo::CAPTION)
                         .text_color(theme.colors.muted_foreground)
                         .child(
                             "通过 JSON-RPC 2.0 stdio 连接任意自定义 Agent Client Protocol 服务。",
@@ -564,7 +502,58 @@ fn render_providers(
                         ),
                 ),
         )
-        .child(list_card)
+        .child(Separator::new("set.prov.top_sep").horizontal())
+        .child(
+            div()
+                .pt(px(12.0))
+                .pb(px(4.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(section_heading(
+                    "本地已探测 Provider（12 路原生驱动）",
+                    theme,
+                ))
+                .child(
+                    Badge::new(format!(
+                        "{} / {} 可用",
+                        state
+                            .provider_statuses
+                            .iter()
+                            .filter(|p| {
+                                p.install_state == lingxi_domain::ProviderInstallState::Installed
+                            })
+                            .count(),
+                        state.provider_statuses.len()
+                    ))
+                    .variant(BadgeVariant::Secondary),
+                ),
+        );
+
+    for (idx, p) in state.provider_statuses.iter().enumerate() {
+        if idx > 0 {
+            root = root.child(Separator::new(("set.prov.sep", idx)).horizontal());
+        }
+        let installed = p.install_state == lingxi_domain::ProviderInstallState::Installed;
+        let detail: SharedString = match (&p.version, &p.binary_path) {
+            (Some(v), Some(path)) => format!("{v} · {path}").into(),
+            (Some(v), None) => v.clone().into(),
+            (None, Some(path)) => path.clone().into(),
+            (None, None) => "未在 PATH 或默认位置检测到可执行文件".into(),
+        };
+        root = root.child(setting_row(
+            p.kind.display_name(),
+            detail,
+            Badge::new(if installed { "已就绪" } else { "未安装" }).variant(if installed {
+                BadgeVariant::Secondary
+            } else {
+                BadgeVariant::Outline
+            }),
+            theme,
+        ));
+    }
+
+    root
 }
 
 fn render_keybindings(theme: &UiTheme) -> impl IntoElement {
@@ -582,48 +571,64 @@ fn render_keybindings(theme: &UiTheme) -> impl IntoElement {
         ("关闭当前弹窗", "关闭设置、命令面板或更新弹窗", "Esc"),
     ];
 
-    let mut card = settings_card(theme);
+    let mut col = div()
+        .flex()
+        .flex_col()
+        .child(section_heading("全局快捷键", theme));
     for (idx, (title, desc, key)) in bindings.into_iter().enumerate() {
         if idx > 0 {
-            card = card.child(Separator::new(("set.kb.sep", idx)).horizontal());
+            col = col.child(Separator::new(("set.kb.sep", idx)).horizontal());
         }
-        card = card.child(setting_row(title, desc, Kbd::new(key), theme));
+        col = col.child(setting_row(title, desc, Kbd::new(key), theme));
     }
-    card
+    col
 }
 
 fn render_mcp_skills(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
-    let mut skills_card = settings_card(theme).child(
-        div()
-            .flex()
-            .items_center()
-            .justify_between()
-            .child(
-                div()
-                    .text_size(px(14.0))
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .child("已发现本地 Skills"),
-            )
-            .child(
-                Badge::new(format!("{} 个", state.discovered_skills.len()))
-                    .variant(BadgeVariant::Secondary),
-            ),
-    );
+    let mut col = div()
+        .flex()
+        .flex_col()
+        .child(section_heading("MCP 服务", theme))
+        .child(setting_row(
+            "内置 MCP HTTP Server",
+            "基于 Axum 提供 /mcp JSON-RPC 工具注册与调度端点",
+            Badge::new(if state.mcp_server_running {
+                "就绪"
+            } else {
+                "未启动"
+            })
+            .variant(BadgeVariant::Secondary),
+            theme,
+        ))
+        .child(Separator::new("set.mcp.sep0").horizontal())
+        .child(
+            div()
+                .pt(px(12.0))
+                .pb(px(4.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(section_heading("已发现本地 Skills", theme))
+                .child(
+                    Badge::new(format!("{} 个", state.discovered_skills.len()))
+                        .variant(BadgeVariant::Secondary),
+                ),
+        );
 
     if state.discovered_skills.is_empty() {
-        skills_card = skills_card.child(
+        col = col.child(
             div()
-                .text_size(px(13.0))
+                .py(px(10.0))
+                .text_size(typo::UI_BODY)
                 .text_color(theme.colors.muted_foreground)
                 .child("未在 ~/.codex/skills 或 ~/.claude/skills 发现额外 Skill 清单。"),
         );
     } else {
         for (idx, skill) in state.discovered_skills.iter().take(20).enumerate() {
             if idx > 0 {
-                skills_card =
-                    skills_card.child(Separator::new(("set.skill.sep", idx)).horizontal());
+                col = col.child(Separator::new(("set.skill.sep", idx)).horizontal());
             }
-            skills_card = skills_card.child(setting_row(
+            col = col.child(setting_row(
                 skill.name.clone(),
                 skill.description.clone(),
                 Badge::new("SKILL.md").variant(BadgeVariant::Outline),
@@ -632,24 +637,7 @@ fn render_mcp_skills(state: &AppUiState, theme: &UiTheme) -> impl IntoElement {
         }
     }
 
-    div()
-        .flex()
-        .flex_col()
-        .gap(px(14.0))
-        .child(
-            settings_card(theme).child(setting_row(
-                "内置 MCP HTTP Server",
-                "基于 Axum 提供 /mcp JSON-RPC 工具注册与调度端点",
-                Badge::new(if state.mcp_server_running {
-                    "就绪"
-                } else {
-                    "未启动"
-                })
-                .variant(BadgeVariant::Secondary),
-                theme,
-            )),
-        )
-        .child(skills_card)
+    col
 }
 
 fn render_remote(
@@ -666,60 +654,61 @@ fn render_remote(
     div()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .child(section_heading("远程访问与配对", theme))
+        .child(setting_row(
+            "远程 WS/RPC 服务",
+            "允许同一局域网或 SSH 隧道客户端通过配对码接入",
+            Switch::new("set.remote.switch")
+                .checked(state.remote_server_running)
+                .on_change(move |_, _, _| d_toggle(UiAction::ToggleRemoteServer)),
+            theme,
+        ))
+        .child(Separator::new("set.remote.sep1").horizontal())
         .child(
-            settings_card(theme)
-                .child(setting_row(
-                    "远程 WS/RPC 服务",
-                    "允许同一局域网或 SSH 隧道客户端通过配对码接入",
-                    Switch::new("set.remote.switch")
-                        .checked(state.remote_server_running)
-                        .on_change(move |_, _, _| d_toggle(UiAction::ToggleRemoteServer)),
-                    theme,
-                ))
-                .child(Separator::new("set.remote.sep1").horizontal())
+            div()
+                .py(px(12.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .child(
+                    div()
+                        .text_size(typo::UI_BODY)
+                        .font_weight(FontWeight::MEDIUM)
+                        .child("监听端口"),
+                )
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .justify_between()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(
                             div()
-                                .text_size(px(14.0))
-                                .font_weight(FontWeight::MEDIUM)
-                                .child("监听端口"),
+                                .w(px(110.0))
+                                .child(Input::new(remote_port_input).aria_label("远程服务端口")),
                         )
                         .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(8.0))
-                                .child(div().w(px(110.0)).child(
-                                    Input::new(remote_port_input).aria_label("远程服务端口"),
-                                ))
-                                .child(
-                                    Button::new("set.remote.save_port")
-                                        .variant(ButtonVariant::Outline)
-                                        .size(ButtonSize::Sm)
-                                        .label("应用端口")
-                                        .on_click(move |_, _, cx| {
-                                            if let Ok(port) =
-                                                port_handle.read(cx).value().trim().parse::<u16>()
-                                            {
-                                                d_port(UiAction::SetRemotePort(port));
-                                            }
-                                        }),
-                                ),
+                            Button::new("set.remote.save_port")
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .label("应用端口")
+                                .on_click(move |_, _, cx| {
+                                    if let Ok(port) =
+                                        port_handle.read(cx).value().trim().parse::<u16>()
+                                    {
+                                        d_port(UiAction::SetRemotePort(port));
+                                    }
+                                }),
                         ),
                 ),
         )
-        .child(settings_card(theme).child(setting_row(
+        .child(Separator::new("set.remote.sep2").horizontal())
+        .child(setting_row(
             "安全边界",
             "仅接受作用域受限的 Pairing Token，禁止暴露明文凭据",
             Badge::new("Scoped Token").variant(BadgeVariant::Outline),
             theme,
-        )))
+        ))
 }
 
 fn render_legacy_import(
@@ -734,44 +723,46 @@ fn render_legacy_import(
         .unwrap_or_else(|| "未检测到 ~/.lingxi-t3 原版数据库".to_string())
         .into();
 
-    div().flex().flex_col().gap(px(14.0)).child(
-        settings_card(theme)
-            .child(setting_row(
-                "原版 LingXi T3 数据库探测",
-                detected,
-                Badge::new(if state.legacy_db_path.is_some() {
-                    "已检测到"
-                } else {
-                    "未找到"
-                })
-                .variant(if state.legacy_db_path.is_some() {
-                    BadgeVariant::Secondary
-                } else {
-                    BadgeVariant::Outline
-                }),
-                theme,
-            ))
-            .child(Separator::new("set.imp.sep1").horizontal())
-            .child(setting_row(
-                "只读安全导入",
-                "以 SQLITE_OPEN_READ_ONLY 打开原库，绝不写入或覆盖原版目录；导入前自动备份原生库。",
-                Button::new("set.imp.run")
-                    .variant(ButtonVariant::Default)
-                    .size(ButtonSize::Sm)
-                    .disabled(state.legacy_db_path.is_none())
-                    .label("立即只读导入")
-                    .on_click(move |_, _, _| d_import(UiAction::RunLegacyImport)),
-                theme,
-            ))
-            .when_some(state.last_import_summary.clone(), |el, summary| {
-                el.child(Separator::new("set.imp.sep2").horizontal()).child(
-                    div()
-                        .text_size(px(13.0))
-                        .text_color(theme.colors.success)
-                        .child(summary),
-                )
+    div()
+        .flex()
+        .flex_col()
+        .child(section_heading("原版数据只读迁移", theme))
+        .child(setting_row(
+            "原版 LingXi T3 数据库探测",
+            detected,
+            Badge::new(if state.legacy_db_path.is_some() {
+                "已检测到"
+            } else {
+                "未找到"
+            })
+            .variant(if state.legacy_db_path.is_some() {
+                BadgeVariant::Secondary
+            } else {
+                BadgeVariant::Outline
             }),
-    )
+            theme,
+        ))
+        .child(Separator::new("set.imp.sep1").horizontal())
+        .child(setting_row(
+            "只读安全导入",
+            "以 SQLITE_OPEN_READ_ONLY 打开原库，绝不写入或覆盖原版目录；导入前自动备份原生库。",
+            Button::new("set.imp.run")
+                .variant(ButtonVariant::Default)
+                .size(ButtonSize::Sm)
+                .disabled(state.legacy_db_path.is_none())
+                .label("立即只读导入")
+                .on_click(move |_, _, _| d_import(UiAction::RunLegacyImport)),
+            theme,
+        ))
+        .when_some(state.last_import_summary.clone(), |el, summary| {
+            el.child(Separator::new("set.imp.sep2").horizontal()).child(
+                div()
+                    .py(px(12.0))
+                    .text_size(typo::UI_BODY)
+                    .text_color(theme.colors.success)
+                    .child(summary),
+            )
+        })
 }
 
 fn render_about(
@@ -787,42 +778,64 @@ fn render_about(
         None => "当前已是最新版本，支持 Stable / Nightly 双通道检查。".into(),
     };
 
+    let misans_status = if has_misans_available() {
+        "MiSans（已本地嵌入）"
+    } else {
+        "PingFang SC / 系统回退"
+    };
+
     div()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .child(section_heading("版本与更新", theme))
+        .child(setting_row(
+            "LingXi T3 Native",
+            "Rust + GPUI + gpuicn + SQLite WAL + Tokio 原生桌面版",
+            Badge::new(format!("v{}", env!("CARGO_PKG_VERSION"))).variant(BadgeVariant::Secondary),
+            theme,
+        ))
+        .child(Separator::new("set.about.sep1").horizontal())
+        .child(setting_row(
+            "更新通道",
+            "选择接收正式版或 Nightly 预览版",
+            Select::new(update_channel_select).w(px(160.0)),
+            theme,
+        ))
+        .child(Separator::new("set.about.sep2").horizontal())
+        .child(setting_row(
+            "检查更新",
+            update_desc,
+            Button::new("set.about.check")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .label("立即检查")
+                .on_click(move |_, _, _| d_check(UiAction::CheckUpdates)),
+            theme,
+        ))
+        .child(Separator::new("set.about.sep3").horizontal())
         .child(
-            settings_card(theme)
-                .child(setting_row(
-                    "LingXi T3 Native",
-                    "Rust + GPUI + gpuicn + SQLite WAL + Tokio 原生重构版",
-                    Badge::new(format!("v{}", env!("CARGO_PKG_VERSION")))
-                        .variant(BadgeVariant::Secondary),
-                    theme,
-                ))
-                .child(Separator::new("set.about.sep1").horizontal())
-                .child(setting_row(
-                    "更新通道",
-                    "选择接收正式版或 Nightly 预览版",
-                    Select::new(update_channel_select).w(px(160.0)),
-                    theme,
-                ))
-                .child(Separator::new("set.about.sep2").horizontal())
-                .child(setting_row(
-                    "检查更新",
-                    update_desc,
-                    Button::new("set.about.check")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Sm)
-                        .label("立即检查")
-                        .on_click(move |_, _, _| d_check(UiAction::CheckUpdates)),
-                    theme,
-                )),
+            div()
+                .pt(px(12.0))
+                .child(section_heading("字体与开源许可", theme)),
         )
-        .child(settings_card(theme).child(setting_row(
-            "开源许可与致谢",
+        .child(setting_row(
+            "Nunito Sans & JetBrains Mono",
+            "SIL Open Font License 1.1 · Copyright © Nunito / JetBrains Mono Project Authors",
+            Badge::new("SIL OFL 1.1").variant(BadgeVariant::Outline),
+            theme,
+        ))
+        .child(Separator::new("set.about.sep4").horizontal())
+        .child(setting_row(
+            "MiSans 简体中文字体",
+            "Copyright © Beijing Xiaomi Mobile Software Co., Ltd. · 仅随应用内部嵌入使用",
+            Badge::new(misans_status).variant(BadgeVariant::Outline),
+            theme,
+        ))
+        .child(Separator::new("set.about.sep5").horizontal())
+        .child(setting_row(
+            "软件开源许可",
             "MIT License · 基于 GPUI、gpui-kit、gpuicn、Tokio、SQLite 构建",
             Badge::new("MIT").variant(BadgeVariant::Outline),
             theme,
-        )))
+        ))
 }

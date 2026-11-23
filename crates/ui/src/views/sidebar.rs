@@ -7,7 +7,6 @@ use gpui_kit::{
 };
 use gpuicn::button::{Button, ButtonSize, ButtonVariant};
 use gpuicn::input::{Input, InputState};
-use gpuicn::kbd::Kbd;
 use gpuicn::sidebar::{
     Sidebar, SidebarItem, SidebarItemSize, sidebar_badge, sidebar_group_label, sidebar_separator,
 };
@@ -16,6 +15,7 @@ use gpuicn::theme::UiTheme;
 use crate::components::{icon_xs, status_dot};
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, SettingsSection, UiAction};
+use crate::tokens::{radius, space, typo};
 
 pub fn render_sidebar(
     state: &AppUiState,
@@ -54,12 +54,13 @@ pub fn render_sidebar(
                     .flex()
                     .items_center()
                     .justify_between()
+                    .px(px(2.0))
                     .child(
                         div()
-                            .text_size(px(12.0))
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_size(typo::CAPTION)
+                            .font_weight(FontWeight::MEDIUM)
                             .text_color(theme.colors.sidebar_muted_foreground())
-                            .child("工作区与会话"),
+                            .child("工作区"),
                     )
                     .child(
                         Button::new("sb.add_project")
@@ -70,46 +71,101 @@ pub fn render_sidebar(
                             .child(
                                 lucide(LucideIcon::FolderPlus)
                                     .size(px(15.0))
-                                    .text_color(theme.colors.sidebar_foreground),
+                                    .text_color(theme.colors.sidebar_muted_foreground()),
                             ),
                     ),
             )
             .child(Input::new(filter_input).aria_label("搜索工作区或会话"))
     };
 
-    let footer = div()
-        .flex()
-        .flex_col()
-        .gap(px(2.0))
-        .child(
-            SidebarItem::new("sb.footer.import", "数据迁移")
-                .collapsed(collapsed)
-                .size(SidebarItemSize::Small)
-                .icon(lucide(LucideIcon::DatabaseBackup).size(px(15.0)))
-                .on_activate(move |_, _, _| {
-                    d_import(UiAction::OpenSettings(SettingsSection::LegacyImport))
-                }),
-        )
-        .child(
-            SidebarItem::new("sb.footer.metrics", "额度与监控")
-                .collapsed(collapsed)
-                .size(SidebarItemSize::Small)
-                .selected(state.inspector_open && state.inspector_tab == InspectorTab::Metrics)
-                .icon(lucide(LucideIcon::Gauge).size(px(15.0)))
-                .on_activate(move |_, _, _| {
-                    d_metrics(UiAction::ToggleInspector(InspectorTab::Metrics))
-                }),
-        )
-        .child(
-            SidebarItem::new("sb.footer.settings", "设置中心")
-                .collapsed(collapsed)
-                .size(SidebarItemSize::Small)
-                .icon(lucide(LucideIcon::Settings).size(px(15.0)))
-                .trailing(Kbd::new("⌘,"))
-                .on_activate(move |_, _, _| {
+    // Compact horizontal footer row (replaces 3 stacked full-width buttons)
+    let footer = if collapsed {
+        div().flex().justify_center().child(
+            Button::new("sb.footer.settings_rail")
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::IconSm)
+                .aria_label("设置中心")
+                .on_click(move |_, _, _| {
                     d_settings(UiAction::OpenSettings(SettingsSection::General))
-                }),
-        );
+                })
+                .child(
+                    lucide(LucideIcon::Settings)
+                        .size(px(15.0))
+                        .text_color(theme.colors.sidebar_muted_foreground()),
+                ),
+        )
+    } else {
+        div()
+            .w_full()
+            .flex()
+            .items_center()
+            .justify_between()
+            .gap(px(4.0))
+            .child(
+                Button::new("sb.footer.settings")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Sm)
+                    .on_click(move |_, _, _| {
+                        d_settings(UiAction::OpenSettings(SettingsSection::General))
+                    })
+                    .child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(6.0))
+                            .child(icon_xs(
+                                LucideIcon::Settings,
+                                theme.colors.sidebar_muted_foreground(),
+                            ))
+                            .child(
+                                div()
+                                    .text_size(typo::CAPTION)
+                                    .text_color(theme.colors.sidebar_foreground)
+                                    .child("设置"),
+                            ),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(2.0))
+                    .child(
+                        Button::new("sb.footer.import")
+                            .variant(ButtonVariant::Ghost)
+                            .size(ButtonSize::IconSm)
+                            .aria_label("数据迁移")
+                            .on_click(move |_, _, _| {
+                                d_import(UiAction::OpenSettings(SettingsSection::LegacyImport))
+                            })
+                            .child(icon_xs(
+                                LucideIcon::DatabaseBackup,
+                                theme.colors.sidebar_muted_foreground(),
+                            )),
+                    )
+                    .child(
+                        Button::new("sb.footer.metrics")
+                            .variant(
+                                if state.inspector_open
+                                    && state.inspector_tab == InspectorTab::Metrics
+                                {
+                                    ButtonVariant::Secondary
+                                } else {
+                                    ButtonVariant::Ghost
+                                },
+                            )
+                            .size(ButtonSize::IconSm)
+                            .aria_label("额度与监控")
+                            .on_click(move |_, _, _| {
+                                d_metrics(UiAction::ToggleInspector(InspectorTab::Metrics))
+                            })
+                            .child(icon_xs(
+                                LucideIcon::Gauge,
+                                theme.colors.sidebar_muted_foreground(),
+                            )),
+                    ),
+            )
+    };
 
     let mut sidebar = Sidebar::new("lingxi.sidebar", "工作区导航")
         .surface(true)
@@ -137,26 +193,26 @@ pub fn render_sidebar(
         let d_open = Arc::clone(dispatcher);
         sidebar = sidebar.child(
             div()
-                .p(px(12.0))
-                .rounded(px(8.0))
-                .border_1()
-                .border_color(theme.colors.sidebar_border)
-                .bg(theme.colors.card.opacity(0.6))
+                .px(px(12.0))
+                .py(px(14.0))
+                .rounded(radius::CARD)
+                .bg(theme.colors.sidebar_accent.opacity(0.45))
                 .flex()
                 .flex_col()
                 .gap(px(8.0))
                 .child(
                     div()
-                        .text_size(px(13.0))
+                        .text_size(typo::UI_BODY)
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.colors.sidebar_foreground)
                         .child("暂无已打开工作区"),
                 )
                 .child(
                     div()
-                        .text_size(px(12.0))
+                        .text_size(typo::CAPTION)
+                        .line_height(typo::CAPTION_LH)
                         .text_color(theme.colors.sidebar_muted_foreground())
-                        .child("点击下方按钮打开项目目录，或从设置中只读导入原版会话。"),
+                        .child("在右侧直接开始提问，或打开本地项目文件夹。"),
                 )
                 .child(
                     Button::new("sb.empty.open")
@@ -185,11 +241,11 @@ pub fn render_sidebar(
         }
 
         let project_row = div()
+            .h(px(28.0))
             .flex()
             .items_center()
             .justify_between()
-            .px(px(4.0))
-            .py(px(2.0))
+            .px(px(6.0))
             .child(
                 div()
                     .id(("sb.proj", p_idx))
@@ -218,8 +274,8 @@ pub fn render_sidebar(
                         div()
                             .min_w_0()
                             .truncate()
-                            .text_size(px(13.0))
-                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_size(typo::CAPTION)
+                            .font_weight(FontWeight::MEDIUM)
                             .text_color(theme.colors.sidebar_foreground)
                             .child(project.title.clone()),
                     ),
@@ -267,7 +323,7 @@ pub fn render_sidebar(
 
         if expanded {
             if threads.is_empty() {
-                sidebar = sidebar.child(sidebar_group_label("暂无匹配会话", cx));
+                sidebar = sidebar.child(sidebar_group_label("暂无会话", cx));
             } else {
                 for (t_idx, thread) in threads.into_iter().enumerate() {
                     let selected = state.active_thread_id.as_ref() == Some(&thread.id);
@@ -277,7 +333,9 @@ pub fn render_sidebar(
 
                     let mut item = SidebarItem::new(item_id, thread.title.clone())
                         .selected(selected)
-                        .size(SidebarItemSize::Small)
+                        .size(SidebarItemSize::Default)
+                        .h(space::SIDEBAR_ROW_HEIGHT)
+                        .pl(px(12.0))
                         .icon(status_dot(thread.status, theme))
                         .on_activate(move |_, _, _| d_sel(UiAction::SelectThread(tid.clone())));
 

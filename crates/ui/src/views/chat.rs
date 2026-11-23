@@ -20,7 +20,7 @@ use lingxi_domain::{
 use crate::components::{icon_xs, status_dot};
 use crate::shell::ActionDispatcher;
 use crate::state::{AppUiState, InspectorTab, UiAction, status_label};
-use crate::theme::tokens::{CHAT_COLUMN_MAX_WIDTH, THREAD_HEADER_HEIGHT};
+use crate::tokens::{radius, space, surface, typo};
 
 pub fn render_chat_pane(
     state: &AppUiState,
@@ -38,10 +38,10 @@ pub fn render_chat_pane(
     let active_tab = state.inspector_open.then_some(state.inspector_tab);
 
     let header = div()
-        .h(THREAD_HEADER_HEIGHT)
+        .h(space::THREAD_HEADER_HEIGHT)
         .w_full()
         .flex_shrink_0()
-        .px(px(20.0))
+        .px(px(22.0))
         .border_b_1()
         .border_color(theme.colors.border)
         .bg(theme.colors.background)
@@ -60,8 +60,9 @@ pub fn render_chat_pane(
                     div()
                         .min_w_0()
                         .truncate()
-                        .text_size(px(15.0))
-                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(typo::SECTION_TITLE)
+                        .line_height(typo::SECTION_TITLE_LH)
+                        .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.colors.foreground)
                         .child(thread.title.clone()),
                 )
@@ -73,19 +74,21 @@ pub fn render_chat_pane(
                     )
                 })
                 .child(
-                    Badge::new(format!(
-                        "{} · {}",
-                        thread.model_selection.provider.display_name(),
-                        thread.model_selection.model_slug
-                    ))
-                    .variant(BadgeVariant::Secondary),
+                    div()
+                        .text_size(typo::CAPTION)
+                        .text_color(theme.colors.muted_foreground)
+                        .child(format!(
+                            "{} · {}",
+                            thread.model_selection.provider.display_name(),
+                            thread.model_selection.model_slug
+                        )),
                 )
                 .when(thread.status != ThreadRunStatus::Idle, |el| {
                     el.child(Badge::new(status_label(thread.status)).variant(
                         if thread.status == ThreadRunStatus::Error {
                             BadgeVariant::Destructive
                         } else {
-                            BadgeVariant::Default
+                            BadgeVariant::Secondary
                         },
                     ))
                 }),
@@ -94,7 +97,7 @@ pub fn render_chat_pane(
             div()
                 .flex()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(4.0))
                 .flex_shrink_0()
                 .when(checkpoint_count > 0, |el| {
                     el.child(
@@ -149,38 +152,40 @@ pub fn render_chat_pane(
 
     let mut feed = div()
         .w_full()
-        .max_w(CHAT_COLUMN_MAX_WIDTH)
+        .max_w(space::CHAT_COLUMN_MAX_WIDTH)
         .mx_auto()
         .px(px(24.0))
-        .py(px(20.0))
+        .py(px(24.0))
         .flex()
         .flex_col()
-        .gap(px(16.0));
+        .gap(px(22.0));
 
     if messages.is_empty() {
         feed = feed.child(
             div()
                 .w_full()
-                .p(px(24.0))
-                .rounded(px(12.0))
-                .border_1()
-                .border_color(theme.colors.border)
-                .bg(theme.colors.card)
+                .px(px(18.0))
+                .py(px(16.0))
+                .rounded(radius::CARD)
+                .bg(surface::quiet_panel(theme))
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(4.0))
                 .child(
                     div()
-                        .text_size(px(15.0))
-                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(typo::SECTION_TITLE)
+                        .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.colors.foreground)
                         .child("新会话已就绪"),
                 )
                 .child(
                     div()
-                        .text_size(px(13.5))
+                        .text_size(typo::UI_BODY)
+                        .line_height(typo::UI_BODY_LH)
                         .text_color(theme.colors.muted_foreground)
-                        .child("在下方输入框描述你的任务，支持 `@文件` 引用工作区文件、`/` 快捷命令与中文直接输入。"),
+                        .child(
+                            "在下方输入框描述你的任务，支持 @文件 引用工作区文件与 / 快捷命令。",
+                        ),
                 ),
         );
     } else {
@@ -188,9 +193,9 @@ pub fn render_chat_pane(
             let is_user = msg.role == MessageRole::User;
             let author_name = match msg.role {
                 MessageRole::User => "主人",
-                MessageRole::Assistant => "LingXi Agent",
+                MessageRole::Assistant => "LingXi",
                 MessageRole::System => "系统",
-                MessageRole::Tool => "工具调用",
+                MessageRole::Tool => "工具",
             };
             let ts: SharedString = msg.created_at.format("%H:%M").to_string().into();
             let avatar_fallback = if is_user { "主" } else { "灵" };
@@ -205,25 +210,20 @@ pub fn render_chat_pane(
                 )
                 .author(author_name)
                 .timestamp(ts)
-                .header_child(
-                    Badge::new(match msg.role {
-                        MessageRole::User => "User",
-                        MessageRole::Assistant => thread.model_selection.provider.display_name(),
-                        MessageRole::System => "System",
-                        MessageRole::Tool => "Tool",
-                    })
-                    .variant(if is_user {
-                        BadgeVariant::Outline
-                    } else {
-                        BadgeVariant::Secondary
-                    }),
-                )
+                .when(!is_user, |m| {
+                    m.header_child(
+                        div()
+                            .text_size(typo::CAPTION)
+                            .text_color(theme.colors.muted_foreground)
+                            .child(thread.model_selection.provider.display_name()),
+                    )
+                })
                 .child(
                     div()
                         .w_full()
                         .min_w_0()
-                        .text_size(px(14.0))
-                        .line_height(px(21.0))
+                        .text_size(typo::CHAT_PROSE)
+                        .line_height(typo::CHAT_PROSE_LH)
                         .child(markdown(md_id, msg.content.clone(), cx)),
                 );
 
@@ -243,13 +243,13 @@ pub fn render_chat_pane(
                 };
 
                 let mut body = div()
-                    .p(px(10.0))
-                    .rounded(px(8.0))
-                    .border_1()
-                    .border_color(theme.colors.border)
-                    .bg(theme.colors.muted.opacity(0.45))
+                    .px(px(12.0))
+                    .py(px(10.0))
+                    .rounded(radius::CONTROL)
+                    .bg(surface::quiet_panel(theme))
                     .font_family(theme.fonts.mono.clone())
-                    .text_size(px(12.0))
+                    .text_size(typo::CODE)
+                    .line_height(typo::CODE_LH)
                     .text_color(theme.colors.foreground)
                     .flex()
                     .flex_col()
@@ -259,7 +259,7 @@ pub fn render_chat_pane(
                 if let Some(output) = &tool.output_preview {
                     body = body.child(
                         div()
-                            .pt(px(4.0))
+                            .pt(px(6.0))
                             .border_t_1()
                             .border_color(theme.colors.border)
                             .text_color(theme.colors.muted_foreground)
@@ -268,7 +268,7 @@ pub fn render_chat_pane(
                 }
 
                 row = row.child(
-                    div().w_full().pt(px(4.0)).child(
+                    div().w_full().pt(px(6.0)).child(
                         collapsible(("chat.tool", m_idx * 100 + t_idx), is_open, window, cx)
                             .child(
                                 collapsible_trigger(
@@ -286,10 +286,13 @@ pub fn render_chat_pane(
                                         .flex()
                                         .items_center()
                                         .gap(px(8.0))
-                                        .child(icon_xs(LucideIcon::Wrench, theme.colors.primary))
+                                        .child(icon_xs(
+                                            LucideIcon::Wrench,
+                                            theme.colors.muted_foreground,
+                                        ))
                                         .child(
                                             div()
-                                                .text_size(px(13.0))
+                                                .text_size(typo::UI_BODY)
                                                 .font_weight(FontWeight::MEDIUM)
                                                 .child(tool.name.clone()),
                                         )
@@ -301,19 +304,20 @@ pub fn render_chat_pane(
                 );
             }
 
-            feed = feed.child(
-                div()
-                    .w_full()
-                    .rounded(px(10.0))
-                    .px(px(14.0))
-                    .py(px(10.0))
-                    .when(is_user, |el| {
-                        el.bg(theme.colors.card)
-                            .border_1()
-                            .border_color(theme.colors.border)
-                    })
-                    .child(row),
-            );
+            if is_user {
+                feed = feed.child(
+                    div()
+                        .w_full()
+                        .rounded(radius::BUBBLE)
+                        .bg(surface::user_bubble(theme))
+                        .px(px(16.0))
+                        .py(px(12.0))
+                        .child(row),
+                );
+            } else {
+                // Agent messages sit directly on Level 0 reading canvas with no distracting card border
+                feed = feed.child(div().w_full().px(px(4.0)).py(px(2.0)).child(row));
+            }
         }
     }
 
@@ -329,11 +333,11 @@ pub fn render_chat_pane(
         feed = feed.child(
             div()
                 .w_full()
-                .p(px(14.0))
-                .rounded(px(10.0))
+                .p(px(16.0))
+                .rounded(radius::CARD)
                 .border_1()
-                .border_color(theme.colors.warning)
-                .bg(theme.colors.card)
+                .border_color(theme.colors.border)
+                .bg(surface::quiet_panel(theme))
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
@@ -355,17 +359,17 @@ pub fn render_chat_pane(
                                 )
                                 .child(
                                     div()
-                                        .text_size(px(14.0))
-                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_size(typo::UI_BODY)
+                                        .font_weight(FontWeight::MEDIUM)
                                         .text_color(theme.colors.foreground)
-                                        .child(format!("请求权限确认：{}", approval.tool_name)),
+                                        .child(format!("请求权限确认 · {}", approval.tool_name)),
                                 ),
                         )
                         .child(
                             Button::new(("chat.approval.detail", a_idx))
                                 .variant(ButtonVariant::Ghost)
                                 .size(ButtonSize::Xs)
-                                .label("弹窗确认")
+                                .label("详情")
                                 .on_click(move |_, _, _| {
                                     d_modal(UiAction::OpenApprovalModal(aid_modal.clone()))
                                 }),
@@ -373,11 +377,13 @@ pub fn render_chat_pane(
                 )
                 .child(
                     div()
-                        .p(px(10.0))
-                        .rounded(px(6.0))
-                        .bg(theme.colors.muted)
+                        .px(px(12.0))
+                        .py(px(10.0))
+                        .rounded(radius::CONTROL)
+                        .bg(theme.colors.card)
                         .font_family(theme.fonts.mono.clone())
-                        .text_size(px(12.5))
+                        .text_size(typo::CODE)
+                        .line_height(typo::CODE_LH)
                         .text_color(theme.colors.foreground)
                         .child(approval.summary.clone()),
                 )
@@ -437,6 +443,7 @@ pub fn render_chat_pane(
         .flex_1()
         .min_w_0()
         .min_h_0()
+        .overflow_hidden()
         .flex()
         .flex_col()
         .child(header)

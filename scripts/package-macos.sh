@@ -19,6 +19,12 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$ROOT_DIR/target/release/$BIN_NAME" "$APP_BUNDLE/Contents/MacOS/$BIN_NAME"
 chmod +x "$APP_BUNDLE/Contents/MacOS/$BIN_NAME"
 
+# Embed locally fetched MiSans inside the app bundle Resources (not redistributed standalone)
+if compgen -G "$ROOT_DIR/assets/fonts/local/MiSans-*.ttf" >/dev/null; then
+  mkdir -p "$APP_BUNDLE/Contents/Resources/fonts"
+  cp "$ROOT_DIR"/assets/fonts/local/MiSans-*.ttf "$APP_BUNDLE/Contents/Resources/fonts/"
+fi
+
 # Build .icns from assets/icons/icon-512.png using macOS sips + iconutil
 ICON_SRC="$ROOT_DIR/assets/icons/icon-512.png"
 if [[ -f "$ICON_SRC" ]] && command -v iconutil >/dev/null 2>&1; then

@@ -56,3 +56,45 @@
 - `cargo test --workspace`: All unit & integration tests passed (0 failures)
 - Real GUI Window Screenshot QA: 27 Native PNGs + 6 Isolated Original PNGs inspected visually via `read_file`
 - Release Build & macOS App/DMG Packaging: `cargo build --release --bin lingxi-t3-native && ./scripts/package-macos.sh`
+
+---
+
+## 5. v2 Visual Refinement & Design System Overhaul (Claude Desktop Level)
+
+### 5.1 Design Tokens & Typography Architecture
+
+- **Centralized Design Tokens** ([tokens.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/tokens.rs), [theme.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/theme.rs)):
+  - **Typography Scale**: Page Title `22px`, Section Title `15.5px`, Chat Prose `14.5px` (`lh 23px`), Regular UI `13.5px` (`lh 20px`), Caption `12.5px` (`lh 18px`), Code/Diff/Terminal `13px` (`lh 20px`); unified weights `400 / 500 / 600`.
+  - **3-Font Stack & Licensing Compliance** ([fonts.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/fonts.rs), [font-licensing.md](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/docs/font-licensing.md)):
+    - Latin & numerals: **Nunito Sans** (SIL OFL 1.1, embedded in `assets/fonts/`).
+    - Code / Diff / Terminal: **JetBrains Mono** (SIL OFL 1.1, embedded in `assets/fonts/`).
+    - Simplified Chinese: **MiSans** (local-only in `.gitignore`d `assets/fonts/local/`, fetched via `scripts/fetch-local-fonts.sh`, embedded into internal `.app` bundle at `Contents/Resources/fonts/` with PingFang SC / Microsoft YaHei / Noto Sans CJK SC fallbacks).
+- **4-Level Elevation & Surface Hierarchy** (Independent Light Warm Cream & Layered Dark Charcoal palettes):
+  - **Level 0** (Canvas `#FAF7F2` / `#1A1816`, Sidebar `#F3EEE6` / `#141312`, borderless Agent prose, soft User bubble): zero shadow.
+  - **Level 1** (Floating Composer): soft ambient shadow (`0 2px 10px` light / `0 2px 12px` + `1px` top inset highlight dark).
+  - **Level 2** (Popover / Select dropdown / Command Palette): elevated crisp surface (`0 8px 20px` light / `0 8px 22px` + `1px` top inset dark).
+  - **Level 3** (Settings / Update / Approval Modals): deepest elevation (`0 14px 36px` light / `0 16px 38px` + `1px` top inset dark) with backdrop scrim.
+
+### 5.2 v2 Visual QA Matrix & Caught Refinements
+
+All 21 v2 screenshots across `1440×900`, `1280×800`, and `960×680` (Light & Dark) were visually inspected via `read_file` (`Welcome`, `Chat`, `Model Selector` open, `Command Palette`, `Settings` General/Appearance/Providers/About, `Diff Inspector`, `Permission Approval`, `Update Check`).
+
+Final polish caught and resolved during v2 visual inspection:
+1. **Composer Clipping at `1280×800` Chat**: Added `.h_full().overflow_hidden()` to `center_pane` in [shell.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/shell.rs) and `.overflow_hidden()` to `render_chat_pane` in [chat.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/chat.rs) so `ScrollArea` strictly flexes and keeps `Composer` anchored inside the viewport.
+2. **Modal Shadow Bounding-Box Clipping**: `gpuicn::dialog::modal_viewport` uses `.overflow_y_scroll()`, which clipped wide `BoxShadow`s on modal popups. Wrapped each modal popup in `div().px(px(28.0)).py(px(24.0))` in [modals.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/modals.rs) and tuned Level 2/3 blur radii (`20px` / `36px`) in [tokens.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/tokens.rs).
+3. **`960×680` Settings Breathing Room**: Adjusted Settings modal height clamp to `(viewport.height - px(120.0)).clamp(px(400.0), px(540.0))` in [settings.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/settings.rs) and `.w_full().max_w(px(780.0))` in [modals.rs](file:///Volumes/LingXiWorkspace/Projects/LingXiT3-Native/crates/ui/src/views/modals.rs).
+
+### 5.3 Release Benchmark Comparison (`--bench`)
+
+| Metric | Baseline (Pre-Refinement) | Post-Refinement (v2 + Fonts & Shadows) | Delta |
+| --- | --- | --- | --- |
+| `rss_mib` | `21.34375 MiB` (`22,380,544 B`) | `21.796875 MiB` (`22,855,680 B`) | `+0.45 MiB` |
+| `threads_10k_filter_ms` | `1.19075 ms` | `1.46575 ms` | `+0.275 ms` |
+| `markdown_500_streaming_chunks_ms` | `8.065375 ms` | `8.637875 ms` | `+0.573 ms` |
+| `sqlite_1000_messages_write_ms` | `166.383542 ms` | `170.094083 ms` | `+3.711 ms` |
+| `sqlite_1000_messages_read_ms` | `0.414292 ms` | `0.429125 ms` | `+0.015 ms` |
+
+- `cargo fmt --all -- --check`: Passed
+- `cargo clippy --workspace --all-targets -- -D warnings`: Passed (0 warnings)
+- `cargo test --workspace`: Passed (all crates, 0 failures)
+- macOS Packaging (`./scripts/package-macos.sh`): Produced `dist/LingXi T3 Native.app` & `dist/LingXiT3-Native-0.1.0-macos-arm64.dmg`

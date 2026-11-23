@@ -17,7 +17,7 @@ use lingxi_domain::{
 };
 
 use crate::state::{AppUiState, SettingsSection, UiAction};
-use crate::theme::tokens::{
+use crate::tokens::space::{
     INSPECTOR_MAX_WIDTH, INSPECTOR_MIN_WIDTH, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_MAX_WIDTH,
     SIDEBAR_MIN_WIDTH,
 };
@@ -81,6 +81,9 @@ impl LingXiShellView {
                             thread_id: tid,
                             prompt,
                         });
+                    } else {
+                        comp.update(cx, |c, cx| c.set_value("", window, cx));
+                        d_comp(UiAction::StartQuickThread { prompt });
                     }
                 }
                 ComposerEvent::Autocomplete { trigger, query } => {
@@ -369,6 +372,8 @@ impl Render for LingXiShellView {
                 .flex_1()
                 .min_w_0()
                 .min_h_0()
+                .h_full()
+                .overflow_hidden()
                 .bg(theme.colors.background)
                 .flex()
                 .flex_col()
@@ -392,7 +397,16 @@ impl Render for LingXiShellView {
                 ))
                 .into_any_element()
         } else {
-            render_welcome(&self.state, &self.dispatcher, &theme, cx).into_any_element()
+            render_welcome(
+                &self.state,
+                &self.composer,
+                &self.provider_select,
+                &self.mode_select,
+                &self.dispatcher,
+                &theme,
+                cx,
+            )
+            .into_any_element()
         };
 
         let center_with_inspector = if self.state.inspector_open {
