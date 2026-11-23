@@ -21,8 +21,8 @@
 | F-14 | 编排核心 | 纯决策 `Orchestrator`、幂等 `command_id` 去重、单调事件序列 | `orchestration` | 编排器核心行为测试 | Verified |
 | F-15 | 编排核心 | `EventSink` 单事务写入 + `EffectWorker` 并发执行与优雅取消 | `orchestration`, `storage` | 事务一致性与并发测试 | Verified |
 | F-16 | 编排核心 | 上下文压缩、任务交接、Checkpoint 捕获/回滚、崩溃恢复 | `orchestration`, `git` | 故障恢复与回滚测试 | Verified |
-| F-17 | ACP 协议 | 完整 ACP JSON-RPC 2.0（`initialize`, `session/*`, `configOptions`, 权限） | `acp` | Mock ACP 进程契约测试 | Pending |
-| F-18 | Providers | 12 个桌面 Provider 适配器（Codex/Claude/Antigravity/DSH 等） | `providers` | 契约测试 + 本机真实 CLI 探测 | Pending |
+| F-17 | ACP 协议 | 完整 ACP JSON-RPC 2.0（`initialize`, `session/*`, `configOptions`, 权限） | `acp` | Mock ACP 进程契约测试 | Verified |
+| F-18 | Providers | 12 个桌面 Provider 适配器（Codex/Claude/Antigravity/DSH 等） | `providers` | 契约测试 + 本机真实 CLI 探测 | Verified |
 | F-19 | 数据存储 | SQLite Schema、版本迁移、草稿/设置/投影持久化 | `storage` | 迁移与 CRUD 集成测试 | Pending |
 | F-20 | 数据迁移 | 独立只读旧版数据导入器与时间戳备份回滚 | `storage` | 只读 SHA256 零变更 + 回滚测试 | Pending |
 | F-21 | 系统服务 | 本地文件扫描/搜索、Worktree 管理、原生 Git/Diff/PR | `workspace`, `git` | 临时 Git 仓库集成测试 | Pending |

@@ -1,11 +1,13 @@
 pub mod effect_worker;
 pub mod orchestrator;
+pub mod provider_executor;
 pub mod recovery;
 
 pub use effect_worker::{
     BoxFuture, CheckpointExecutor, EffectWorker, NoopCheckpointExecutor, TurnExecutor,
 };
 pub use orchestrator::{DispatchOutcome, Orchestrator, OutboxEffect};
+pub use provider_executor::ProviderTurnExecutor;
 pub use recovery::{RecoveryReport, recover_after_unclean_exit};
 
 use thiserror::Error;
