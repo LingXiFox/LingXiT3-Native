@@ -18,9 +18,9 @@
 | F-11 | UI 面板 | 内嵌 PTY 终端、Code Diff、只读文件预览、Git & PR 面板 | `ui`, `terminal`, `git` | 面板状态与 Diff 解析测试 | Verified |
 | F-12 | UI 监控 | 上下文窗口分解与 6 平台/Antigravity 多号池额度监控 | `ui`, `telemetry` | 指标聚合测试 | Verified |
 | F-13 | UI 全局 | 设置中心、快捷键自定义、`Cmd+K` 命令面板、全局更新弹窗 | `ui`, `app` | 模糊搜索与快捷键测试 | Verified |
-| F-14 | 编排核心 | 纯决策 `Orchestrator`、幂等 `command_id` 去重、单调事件序列 | `orchestration` | 编排器核心行为测试 | Pending |
-| F-15 | 编排核心 | `EventSink` 单事务写入 + `EffectWorker` 并发执行与优雅取消 | `orchestration`, `storage` | 事务一致性与并发测试 | Pending |
-| F-16 | 编排核心 | 上下文压缩、任务交接、Checkpoint 捕获/回滚、崩溃恢复 | `orchestration`, `git` | 故障恢复与回滚测试 | Pending |
+| F-14 | 编排核心 | 纯决策 `Orchestrator`、幂等 `command_id` 去重、单调事件序列 | `orchestration` | 编排器核心行为测试 | Verified |
+| F-15 | 编排核心 | `EventSink` 单事务写入 + `EffectWorker` 并发执行与优雅取消 | `orchestration`, `storage` | 事务一致性与并发测试 | Verified |
+| F-16 | 编排核心 | 上下文压缩、任务交接、Checkpoint 捕获/回滚、崩溃恢复 | `orchestration`, `git` | 故障恢复与回滚测试 | Verified |
 | F-17 | ACP 协议 | 完整 ACP JSON-RPC 2.0（`initialize`, `session/*`, `configOptions`, 权限） | `acp` | Mock ACP 进程契约测试 | Pending |
 | F-18 | Providers | 12 个桌面 Provider 适配器（Codex/Claude/Antigravity/DSH 等） | `providers` | 契约测试 + 本机真实 CLI 探测 | Pending |
 | F-19 | 数据存储 | SQLite Schema、版本迁移、草稿/设置/投影持久化 | `storage` | 迁移与 CRUD 集成测试 | Pending |

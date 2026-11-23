@@ -1,3 +1,7 @@
+pub mod db;
+pub mod migrations;
+
+pub use db::Database;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -10,4 +14,6 @@ pub enum StorageError {
     Serde(#[from] serde_json::Error),
     #[error("migration error: {0}")]
     Migration(String),
+    #[error("rollback error: {0}")]
+    Rollback(String),
 }
