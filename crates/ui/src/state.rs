@@ -1,16 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
 use lingxi_domain::{
-    AppSettings, AttachmentRef, ChatMessage, CheckpointRecord, ContextBreakdown, GitFileDiff,
-    GitStatusSummary, ModelSelection, PendingApproval, PermissionDecision, ProjectId,
-    ProjectRecord, ProviderKind, ProviderQuotaSnapshot, ProviderStatus, PullRequestSummary,
-    ResourceUsageSnapshot, RuntimeMode, ThreadId, ThreadRecord, ThreadRunStatus, UpdateReleaseInfo,
+    AppSettings, ApprovalId, AttachmentRef, ChatMessage, CheckpointId, CheckpointRecord,
+    ContextBreakdown, GitFileDiff, GitStatusSummary, ModelSelection, PendingApproval,
+    PermissionDecision, ProjectId, ProjectRecord, ProviderKind, ProviderQuotaSnapshot,
+    ProviderStatus, PullRequestSummary, ResourceUsageSnapshot, RuntimeMode, ThemeAppearance,
+    ThreadId, ThreadRecord, ThreadRunStatus, UpdateChannel, UpdateReleaseInfo,
 };
+
+use crate::theme::tokens::{INSPECTOR_DEFAULT_WIDTH, SIDEBAR_DEFAULT_WIDTH};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InspectorTab {
-    Terminal,
     Diff,
+    Terminal,
     GitPr,
     Files,
     Metrics,
@@ -19,12 +22,51 @@ pub enum InspectorTab {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsSection {
     General,
+    Appearance,
     Providers,
     Keybindings,
     McpSkills,
     Remote,
     LegacyImport,
-    Updates,
+    About,
+}
+
+impl SettingsSection {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::General => "常规",
+            Self::Appearance => "外观与主题",
+            Self::Providers => "智能体 Provider",
+            Self::Keybindings => "快捷键",
+            Self::McpSkills => "MCP 与 Skills",
+            Self::Remote => "远程与配对",
+            Self::LegacyImport => "数据迁移与维护",
+            Self::About => "关于与更新",
+        }
+    }
+
+    pub fn slug(self) -> &'static str {
+        match self {
+            Self::General => "general",
+            Self::Appearance => "appearance",
+            Self::Providers => "providers",
+            Self::Keybindings => "keybindings",
+            Self::McpSkills => "mcp",
+            Self::Remote => "remote",
+            Self::LegacyImport => "import",
+            Self::About => "about",
+        }
+    }
+}
+
+/// Mutually exclusive modal state — only one modal can be open at any time.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActiveModal {
+    None,
+    CommandPalette,
+    Settings,
+    Update,
+    PermissionApproval,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,10 +79,18 @@ pub struct TerminalTabView {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DiscoveredSkillView {
+    pub name: String,
+    pub description: String,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandPaletteItem {
     pub id: String,
     pub title: String,
     pub subtitle: String,
+    pub group: String,
     pub shortcut: Option<String>,
 }
 
@@ -58,6 +108,7 @@ pub struct AppUiState {
     pub resource_usage: ResourceUsageSnapshot,
 
     pub expanded_projects: HashSet<ProjectId>,
+    pub expanded_tool_calls: HashSet<String>,
     pub open_tabs: Vec<ThreadId>,
     pub active_thread_id: Option<ThreadId>,
     pub sidebar_collapsed: bool,
@@ -74,6 +125,7 @@ pub struct AppUiState {
     pub mention_query: Option<String>,
     pub workspace_files: Vec<String>,
     pub ime_composing: bool,
+    pub selected_provider_for_new_thread: ProviderKind,
 
     pub git_status: Option<GitStatusSummary>,
     pub git_diffs: Vec<GitFileDiff>,
@@ -85,13 +137,19 @@ pub struct AppUiState {
     pub terminal_tabs: Vec<TerminalTabView>,
     pub active_terminal_id: Option<String>,
 
-    pub command_palette_open: bool,
+    pub active_modal: ActiveModal,
+    pub active_approval_id: Option<ApprovalId>,
     pub command_palette_query: String,
-    pub settings_open: bool,
     pub settings_section: SettingsSection,
-    pub update_modal_open: bool,
     pub available_update: Option<UpdateReleaseInfo>,
     pub update_download_progress: Option<f32>,
+    pub update_checking: bool,
+
+    pub discovered_skills: Vec<DiscoveredSkillView>,
+    pub mcp_server_running: bool,
+    pub remote_server_running: bool,
+    pub legacy_db_path: Option<String>,
+    pub last_import_summary: Option<String>,
     pub status_banner: Option<String>,
 }
 
@@ -109,20 +167,23 @@ impl AppUiState {
             quota_snapshots: Vec::new(),
             resource_usage: ResourceUsageSnapshot::default(),
             expanded_projects: HashSet::new(),
+            expanded_tool_calls: HashSet::new(),
             open_tabs: Vec::new(),
             active_thread_id: None,
             sidebar_collapsed: false,
-            sidebar_width: 264.0,
+            sidebar_width: SIDEBAR_DEFAULT_WIDTH,
             sidebar_filter: String::new(),
             show_archived: false,
-            inspector_open: true,
-            inspector_tab: InspectorTab::GitPr,
-            inspector_width: 380.0,
+            // Right auxiliary tool inspector is collapsed by default per Coding Harness spec.
+            inspector_open: false,
+            inspector_tab: InspectorTab::Diff,
+            inspector_width: INSPECTOR_DEFAULT_WIDTH,
             composer_drafts: HashMap::new(),
             composer_attachments: Vec::new(),
             mention_query: None,
             workspace_files: Vec::new(),
             ime_composing: false,
+            selected_provider_for_new_thread: ProviderKind::Codex,
             git_status: None,
             git_diffs: Vec::new(),
             selected_diff_path: None,
@@ -131,15 +192,35 @@ impl AppUiState {
             pull_requests: Vec::new(),
             terminal_tabs: Vec::new(),
             active_terminal_id: None,
-            command_palette_open: false,
+            active_modal: ActiveModal::None,
+            active_approval_id: None,
             command_palette_query: String::new(),
-            settings_open: false,
             settings_section: SettingsSection::General,
-            update_modal_open: false,
             available_update: None,
             update_download_progress: None,
+            update_checking: false,
+            discovered_skills: Vec::new(),
+            mcp_server_running: true,
+            remote_server_running: false,
+            legacy_db_path: None,
+            last_import_summary: None,
             status_banner: None,
         }
+    }
+
+    pub fn open_modal(&mut self, modal: ActiveModal) {
+        self.active_modal = modal;
+    }
+
+    pub fn close_modal(&mut self) {
+        self.active_modal = ActiveModal::None;
+    }
+
+    pub fn active_project(&self) -> Option<&ProjectRecord> {
+        if let Some(thread) = self.active_thread() {
+            return self.projects.iter().find(|p| p.id == thread.project_id);
+        }
+        self.projects.first()
     }
 
     pub fn active_thread(&self) -> Option<&ThreadRecord> {
@@ -161,6 +242,30 @@ impl AppUiState {
             .and_then(|id| self.approvals_by_thread.get(id))
             .map(Vec::as_slice)
             .unwrap_or(&[])
+    }
+
+    pub fn current_modal_approval(&self) -> Option<&PendingApproval> {
+        let approvals = self.active_approvals();
+        if let Some(id) = &self.active_approval_id
+            && let Some(found) = approvals.iter().find(|a| &a.id == id)
+        {
+            return Some(found);
+        }
+        approvals.first()
+    }
+
+    pub fn active_checkpoints(&self) -> &[CheckpointRecord] {
+        self.active_thread_id
+            .as_ref()
+            .and_then(|id| self.checkpoints_by_thread.get(id))
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
+    }
+
+    pub fn active_context(&self) -> Option<&ContextBreakdown> {
+        self.active_thread_id
+            .as_ref()
+            .and_then(|id| self.context_by_thread.get(id))
     }
 
     pub fn active_draft(&self) -> &str {
@@ -244,33 +349,66 @@ impl AppUiState {
         let mut items = vec![
             CommandPaletteItem {
                 id: "cmd:new_thread".into(),
-                title: "新建会话 (New Thread)".into(),
+                title: "新建会话".into(),
                 subtitle: "在当前工作区创建新的 Agent 会话".into(),
-                shortcut: Some("Cmd+N".into()),
+                group: "快捷命令".into(),
+                shortcut: Some("secondary-n".into()),
+            },
+            CommandPaletteItem {
+                id: "cmd:open_project".into(),
+                title: "打开本地工作区".into(),
+                subtitle: "添加项目目录到工作区树".into(),
+                group: "快捷命令".into(),
+                shortcut: None,
             },
             CommandPaletteItem {
                 id: "cmd:toggle_theme".into(),
-                title: "切换浅色/深色主题 (Toggle Light/Dark)".into(),
+                title: "切换浅色 / 深色主题".into(),
                 subtitle: "在奶白浅色与炭黑深色之间切换".into(),
+                group: "快捷命令".into(),
                 shortcut: None,
             },
             CommandPaletteItem {
                 id: "cmd:toggle_sidebar".into(),
-                title: "切换侧边栏 (Toggle Sidebar)".into(),
-                subtitle: "展开或折叠工作区树状侧边栏".into(),
-                shortcut: Some("Cmd+B".into()),
+                title: "展开 / 收起侧边栏".into(),
+                subtitle: "切换工作区与会话树可见性".into(),
+                group: "快捷命令".into(),
+                shortcut: Some("secondary-b".into()),
+            },
+            CommandPaletteItem {
+                id: "cmd:toggle_diff".into(),
+                title: "打开 Diff 检查器".into(),
+                subtitle: "查看当前工作区变更差异".into(),
+                group: "工作区工具".into(),
+                shortcut: None,
             },
             CommandPaletteItem {
                 id: "cmd:toggle_terminal".into(),
-                title: "切换终端面板 (Toggle Terminal)".into(),
+                title: "切换终端面板".into(),
                 subtitle: "打开或隐藏内嵌 PTY 终端".into(),
-                shortcut: Some("Cmd+J".into()),
+                group: "工作区工具".into(),
+                shortcut: Some("secondary-j".into()),
+            },
+            CommandPaletteItem {
+                id: "cmd:toggle_metrics".into(),
+                title: "查看额度与资源监控".into(),
+                subtitle: "查看上下文占用、CPU/内存及多平台配额".into(),
+                group: "工作区工具".into(),
+                shortcut: None,
             },
             CommandPaletteItem {
                 id: "cmd:open_settings".into(),
-                title: "打开设置中心 (Open Settings)".into(),
-                subtitle: "配置 Provider、快捷键、MCP、数据导入与更新".into(),
-                shortcut: Some("Cmd+,".into()),
+                title: "打开设置中心".into(),
+                subtitle: "配置 Provider、外观、快捷键、MCP、远程与数据迁移".into(),
+                group: "设置与维护".into(),
+                shortcut: Some("secondary-,".into()),
+            },
+            CommandPaletteItem {
+                id: "cmd:open_updates".into(),
+                title: "检查应用更新".into(),
+                subtitle: "查看 Stable / Nightly 版本更新状态".into(),
+                group: "设置与维护".into(),
+                shortcut: None,
             },
         ];
 
@@ -279,10 +417,11 @@ impl AppUiState {
                 id: format!("thread:{}", thread.id),
                 title: thread.title.clone(),
                 subtitle: format!(
-                    "会话 · {} · {}",
+                    "{} · {}",
                     thread.model_selection.provider.display_name(),
                     thread.model_selection.model_slug
                 ),
+                group: "会话列表".into(),
                 shortcut: None,
             });
         }
@@ -309,15 +448,18 @@ pub enum UiAction {
         worktree: bool,
     },
     ToggleProjectExpanded(ProjectId),
+    ToggleToolCallExpanded(String),
     ToggleSidebar,
+    SetSidebarFilter(String),
     ToggleInspector(InspectorTab),
+    CloseInspector,
     ToggleAppearance,
+    SetAppearance(ThemeAppearance),
     OpenSettings(SettingsSection),
-    CloseSettings,
     OpenCommandPalette,
-    CloseCommandPalette,
     OpenUpdateModal,
-    CloseUpdateModal,
+    OpenApprovalModal(ApprovalId),
+    CloseModal,
     SendTurn {
         thread_id: ThreadId,
         prompt: String,
@@ -326,12 +468,12 @@ pub enum UiAction {
     CompactContext(ThreadId),
     ResolveApproval {
         thread_id: ThreadId,
-        approval_id: lingxi_domain::ApprovalId,
+        approval_id: ApprovalId,
         decision: PermissionDecision,
     },
     RevertCheckpoint {
         thread_id: ThreadId,
-        checkpoint_id: lingxi_domain::CheckpointId,
+        checkpoint_id: CheckpointId,
     },
     SelectModel {
         thread_id: ThreadId,
@@ -341,19 +483,32 @@ pub enum UiAction {
         thread_id: ThreadId,
         mode: RuntimeMode,
     },
+    SelectDiffFile(String),
+    OpenFilePreview(String),
+    RefreshGitAndWorkspace,
+    SpawnTerminal,
+    SelectTerminalTab(String),
+    SendTerminalInput {
+        terminal_id: String,
+        command: String,
+    },
     OpenWorkspaceDialog,
     RunLegacyImport,
     CheckUpdates,
+    SetUpdateChannel(UpdateChannel),
+    SaveCustomAcpCommand(Option<String>),
+    SetRemotePort(u16),
+    ToggleRemoteServer,
     SwitchProviderFilter(ProviderKind),
 }
 
 pub fn status_label(status: ThreadRunStatus) -> &'static str {
     match status {
-        ThreadRunStatus::Idle => "Idle",
-        ThreadRunStatus::Running => "Running",
-        ThreadRunStatus::WaitingApproval => "Waiting Approval",
-        ThreadRunStatus::Paused => "Paused",
-        ThreadRunStatus::Error => "Error",
+        ThreadRunStatus::Idle => "空闲",
+        ThreadRunStatus::Running => "运行中",
+        ThreadRunStatus::WaitingApproval => "待确认",
+        ThreadRunStatus::Paused => "已暂停",
+        ThreadRunStatus::Error => "异常",
     }
 }
 
@@ -379,6 +534,22 @@ mod tests {
         );
         assert_eq!(extract_active_mention("hello @"), Some(String::new()));
         assert_eq!(extract_active_mention("normal text"), None);
+    }
+
+    #[test]
+    fn inspector_is_collapsed_by_default_and_modals_are_mutually_exclusive() {
+        let mut state = AppUiState::new(AppSettings::default());
+        assert!(!state.inspector_open);
+        assert_eq!(state.active_modal, ActiveModal::None);
+
+        state.open_modal(ActiveModal::Settings);
+        assert_eq!(state.active_modal, ActiveModal::Settings);
+
+        state.open_modal(ActiveModal::Update);
+        assert_eq!(state.active_modal, ActiveModal::Update);
+
+        state.close_modal();
+        assert_eq!(state.active_modal, ActiveModal::None);
     }
 
     #[test]

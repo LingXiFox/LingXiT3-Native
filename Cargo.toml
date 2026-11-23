@@ -23,8 +23,6 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
-repository = "https://github.com/LingXiFox/LingXiT3-Native"
-authors = ["LingXiFox"]
 
 [workspace.dependencies]
 # UI & GPUI
@@ -64,7 +62,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 semver = "1"
 sha2 = "0.10"
-base64 = "0.22"
 regex = "1"
 clap = { version = "4", features = ["derive"] }
 which = "7"
