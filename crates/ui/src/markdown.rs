@@ -109,6 +109,37 @@ pub fn parse_streaming_blocks(input: &str) -> Vec<MarkdownBlock> {
     blocks
 }
 
+#[derive(Debug, Default)]
+pub struct StreamingMarkdownCache {
+    committed_blocks: Vec<MarkdownBlock>,
+    committed_byte_offset: usize,
+}
+
+impl StreamingMarkdownCache {
+    /// Incrementally parses only newly appended content beyond the last committed boundary,
+    /// avoiding O(N^2) re-parsing during high-frequency streaming deltas.
+    pub fn update(&mut self, full_text: &str) -> Vec<MarkdownBlock> {
+        if full_text.len() < self.committed_byte_offset {
+            self.committed_blocks.clear();
+            self.committed_byte_offset = 0;
+        }
+        let tail = &full_text[self.committed_byte_offset..];
+        if let Some(split_pos) = tail.rfind("\n\n") {
+            let safe_end = self.committed_byte_offset + split_pos + 2;
+            let prefix = &full_text[self.committed_byte_offset..safe_end];
+            if !prefix.contains("```") || prefix.matches("```").count().is_multiple_of(2) {
+                self.committed_blocks.extend(parse_streaming_blocks(prefix));
+                self.committed_byte_offset = safe_end;
+            }
+        }
+        let mut out = self.committed_blocks.clone();
+        out.extend(parse_streaming_blocks(
+            &full_text[self.committed_byte_offset..],
+        ));
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,5 +165,17 @@ mod tests {
                 closed: false
             }
         );
+    }
+
+    #[test]
+    fn incremental_cache_matches_full_parse() {
+        let full = "# Intro\n\nParagraph one.\n\n```rust\nlet x = 1;\n```\n\nTail line";
+        let mut cache = StreamingMarkdownCache::default();
+        let mut partial = String::new();
+        for ch in full.chars() {
+            partial.push(ch);
+            let _ = cache.update(&partial);
+        }
+        assert_eq!(cache.update(full), parse_streaming_blocks(full));
     }
 }

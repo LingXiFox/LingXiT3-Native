@@ -1,3 +1,4 @@
+mod bench;
 mod config;
 mod runtime;
 
@@ -62,6 +63,14 @@ struct Cli {
     /// Path to a legacy LingXi T3 SQLite database to inspect/import read-only.
     #[arg(long)]
     import_legacy: Option<PathBuf>,
+
+    /// Run built-in performance benchmarks and print JSON metrics.
+    #[arg(long)]
+    bench: bool,
+
+    /// Probe locally installed provider CLIs and print JSON statuses.
+    #[arg(long)]
+    probe_providers: bool,
 }
 
 fn init_logging() {
@@ -260,6 +269,17 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    if cli.bench {
+        return bench::run_native_benchmarks(&rt);
+    }
+
+    if cli.probe_providers {
+        let statuses =
+            rt.block_on(provider_registry.detect_all(settings.custom_acp_command.as_deref()));
+        println!("{}", serde_json::to_string_pretty(&statuses)?);
+        return Ok(());
+    }
+
     if let Some(legacy_path) = cli.import_legacy {
         let report = import_legacy_readonly(&db, &legacy_path, &paths.backups_dir)?;
         tracing::info!(
@@ -292,14 +312,13 @@ fn main() -> anyhow::Result<()> {
             .insert(tid.clone(), db.list_messages(&tid)?);
     }
     ui_state.resource_usage = sample_process_resources();
-    let initial_statuses =
-        rt.block_on(provider_registry.detect_all(settings.custom_acp_command.as_deref()));
-    ui_state.quota_snapshots = build_quota_snapshots(&initial_statuses);
-    ui_state.provider_statuses = initial_statuses;
+    ui_state.quota_snapshots = build_quota_snapshots(&[]);
     let _ = ProjectId::new();
 
     let runtime_for_ui = app_runtime.clone();
     let orch_for_ui = Arc::clone(&orchestrator);
+    let registry_for_bg = Arc::clone(&provider_registry);
+    let custom_acp_for_bg = settings.custom_acp_command.clone();
 
     gpuicn::app::run(
         AppConfig::new(APP_DISPLAY_NAME)
@@ -335,12 +354,27 @@ fn main() -> anyhow::Result<()> {
                 d4(UiAction::OpenSettings(SettingsSection::General))
             });
 
-            let entity = cx.entity();
+            let entity: Entity<LingXiShellView> = cx.entity();
             let runtime_for_loop = runtime_for_ui.clone();
             let orch_for_loop = Arc::clone(&orch_for_ui);
-            let _bg = runtime_for_ui.spawn(async {
-                tracing::debug!("App background Tokio loop ready");
-            });
+            let entity_for_probe = entity.clone();
+            let (probe_tx, probe_rx) = tokio::sync::oneshot::channel();
+            std::mem::drop(runtime_for_ui.spawn(async move {
+                let statuses = registry_for_bg
+                    .detect_all(custom_acp_for_bg.as_deref())
+                    .await;
+                let _ = probe_tx.send(statuses);
+            }));
+            cx.spawn(async move |_weak, cx| {
+                if let Ok(statuses) = probe_rx.await {
+                    cx.update_entity(&entity_for_probe, |shell, cx| {
+                        shell.state.quota_snapshots = build_quota_snapshots(&statuses);
+                        shell.state.provider_statuses = statuses;
+                        cx.notify();
+                    });
+                }
+            })
+            .detach();
             cx.spawn(async move |_weak, cx| {
                 while let Some(action) = action_rx.recv().await {
                     handle_ui_action(&entity, &runtime_for_loop, &orch_for_loop, action, cx);
