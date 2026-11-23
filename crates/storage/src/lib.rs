@@ -1,7 +1,9 @@
 pub mod db;
+pub mod legacy_importer;
 pub mod migrations;
 
 pub use db::Database;
+pub use legacy_importer::{LegacyImportReport, import_legacy_readonly, rollback_import};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

@@ -23,10 +23,10 @@
 | F-16 | 编排核心 | 上下文压缩、任务交接、Checkpoint 捕获/回滚、崩溃恢复 | `orchestration`, `git` | 故障恢复与回滚测试 | Verified |
 | F-17 | ACP 协议 | 完整 ACP JSON-RPC 2.0（`initialize`, `session/*`, `configOptions`, 权限） | `acp` | Mock ACP 进程契约测试 | Verified |
 | F-18 | Providers | 12 个桌面 Provider 适配器（Codex/Claude/Antigravity/DSH 等） | `providers` | 契约测试 + 本机真实 CLI 探测 | Verified |
-| F-19 | 数据存储 | SQLite Schema、版本迁移、草稿/设置/投影持久化 | `storage` | 迁移与 CRUD 集成测试 | Pending |
-| F-20 | 数据迁移 | 独立只读旧版数据导入器与时间戳备份回滚 | `storage` | 只读 SHA256 零变更 + 回滚测试 | Pending |
-| F-21 | 系统服务 | 本地文件扫描/搜索、Worktree 管理、原生 Git/Diff/PR | `workspace`, `git` | 临时 Git 仓库集成测试 | Pending |
-| F-22 | 系统服务 | 跨平台 PTY 终端引擎、MCP HTTP Server、Skills 发现、定时任务 | `terminal`, `mcp`, `telemetry` | PTY/MCP/Cron 集成测试 | Pending |
+| F-19 | 数据存储 | SQLite Schema、版本迁移、草稿/设置/投影持久化 | `storage` | 迁移与 CRUD 集成测试 | Verified |
+| F-20 | 数据迁移 | 独立只读旧版数据导入器与时间戳备份回滚 | `storage` | 只读 SHA256 零变更 + 回滚测试 | Verified |
+| F-21 | 系统服务 | 本地文件扫描/搜索、Worktree 管理、原生 Git/Diff/PR | `workspace`, `git` | 临时 Git 仓库集成测试 | Verified |
+| F-22 | 系统服务 | 跨平台 PTY 终端引擎、MCP HTTP Server、Skills 发现、定时任务 | `terminal`, `mcp`, `telemetry` | PTY/MCP/Cron 集成测试 | Verified |
 | F-23 | 远程兼容 | T3 兼容 WS/RPC 服务端、多端配对、SSH 工作区、断线重连 | `remote` | WS/RPC 端到端集成测试 | Pending |
 | F-24 | 性能优化 | 启动/内存/虚拟列表/流式 Markdown/终端输出基准对比 | `app`, `docs` | 本机实测基准报告 | Pending |
 | F-25 | 构建发行 | Stable/Nightly 更新器、macOS `.app`/`.dmg` 打包与 3 平台 CI | `updater`, `.github` | 本机 macOS 打包 + 更新测试 | Pending |

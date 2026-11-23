@@ -7,7 +7,19 @@ use std::sync::Arc;
 use clap::Parser;
 use gpui_kit::{AppContext as _, Entity, KeyBinding, Window, actions, px, size};
 use gpuicn::app::AppConfig;
+use lingxi_domain::{
+    CommandId, MessageId, ModelSelection, OrchestrationCommand, ProjectId, ProviderKind,
+    RuntimeMode, ThreadId, TurnId,
+};
+use lingxi_orchestration::{
+    EffectWorker, NoopCheckpointExecutor, Orchestrator, ProviderTurnExecutor,
+    recover_after_unclean_exit,
+};
 use lingxi_platform::{APP_DISPLAY_NAME, AppPaths, SingleInstanceGuard};
+use lingxi_providers::ProviderRegistry;
+use lingxi_storage::{Database, import_legacy_readonly};
+use lingxi_telemetry::{build_quota_snapshots, sample_process_resources};
+use lingxi_terminal::TerminalManager;
 use lingxi_ui::shell::{ActionDispatcher, LingXiShellView, toggle_appearance_mode};
 use lingxi_ui::state::{AppUiState, InspectorTab, SettingsSection, UiAction};
 use lingxi_ui::theme::{
@@ -63,6 +75,7 @@ fn init_logging() {
 fn handle_ui_action(
     view: &Entity<LingXiShellView>,
     runtime: &AppRuntime,
+    orchestrator: &Arc<Orchestrator>,
     action: UiAction,
     cx: &mut gpui_kit::AsyncApp,
 ) {
@@ -70,6 +83,76 @@ fn handle_ui_action(
         match action {
             UiAction::SelectThread(tid) => shell.state.select_thread(tid),
             UiAction::CloseTab(tid) => shell.state.close_tab(&tid),
+            UiAction::CreateThread {
+                project_id,
+                worktree,
+            } => {
+                let orch = Arc::clone(orchestrator);
+                let tid = ThreadId::new();
+                let branch = worktree.then(|| format!("lingxi/{}", &tid.0[..8]));
+                let cmd = OrchestrationCommand::CreateThread {
+                    command_id: CommandId::new(),
+                    thread_id: tid.clone(),
+                    project_id,
+                    title: "新会话".to_string(),
+                    model_selection: ModelSelection {
+                        provider: ProviderKind::Codex,
+                        model_slug: "default".to_string(),
+                        thinking_level: None,
+                        planner_model: None,
+                        executor_model: None,
+                    },
+                    runtime_mode: RuntimeMode::ApprovalRequired,
+                    branch,
+                    worktree_path: None,
+                };
+                std::mem::drop(runtime.spawn(async move {
+                    let _ = orch.dispatch(cmd).await;
+                }));
+                shell.state.select_thread(tid);
+            }
+            UiAction::SendTurn { thread_id, prompt } => {
+                let orch = Arc::clone(orchestrator);
+                let cmd = OrchestrationCommand::StartTurn {
+                    command_id: CommandId::new(),
+                    thread_id,
+                    turn_id: TurnId::new(),
+                    message_id: MessageId::new(),
+                    prompt,
+                    attachments: Vec::new(),
+                };
+                std::mem::drop(runtime.spawn(async move {
+                    let _ = orch.dispatch(cmd).await;
+                }));
+            }
+            UiAction::CancelTurn(thread_id) => {
+                let orch = Arc::clone(orchestrator);
+                let cmd = OrchestrationCommand::CancelTurn {
+                    command_id: CommandId::new(),
+                    thread_id,
+                    turn_id: None,
+                };
+                std::mem::drop(runtime.spawn(async move {
+                    let _ = orch.dispatch(cmd).await;
+                }));
+            }
+            UiAction::RunLegacyImport => {
+                if let Some(source) = AppPaths::discover_legacy_database() {
+                    let db = orchestrator.db().clone();
+                    let backups = runtime.paths.backups_dir.clone();
+                    std::mem::drop(runtime.spawn(async move {
+                        match import_legacy_readonly(&db, &source, &backups) {
+                            Ok(report) => tracing::info!(
+                                projects = report.projects_imported,
+                                threads = report.threads_imported,
+                                messages = report.messages_imported,
+                                "Legacy read-only import completed"
+                            ),
+                            Err(err) => tracing::error!(%err, "Legacy read-only import failed"),
+                        }
+                    }));
+                }
+            }
             UiAction::ToggleProjectExpanded(pid) => {
                 if !shell.state.expanded_projects.remove(&pid) {
                     shell.state.expanded_projects.insert(pid);
@@ -131,6 +214,27 @@ fn main() -> anyhow::Result<()> {
         tokio_handle: rt.handle().clone(),
     };
 
+    let db = Database::open(&paths.database_path)?;
+    let recovery = recover_after_unclean_exit(&db)?;
+    if recovery.interrupted_threads_recovered > 0 {
+        tracing::warn!(
+            ?recovery,
+            "Recovered interrupted runs after unclean shutdown"
+        );
+    }
+
+    let provider_registry = Arc::new(ProviderRegistry::with_all_builtin());
+    let orchestrator = Arc::new(Orchestrator::new(db.clone()));
+    let _terminal_mgr = Arc::new(TerminalManager::new());
+    let _effect_worker = Arc::new(EffectWorker::new(
+        Arc::clone(&orchestrator),
+        Arc::new(ProviderTurnExecutor {
+            registry: Arc::clone(&provider_registry),
+            custom_acp_command: settings.custom_acp_command.clone(),
+        }),
+        Arc::new(NoopCheckpointExecutor),
+    ));
+
     if cli.check_startup {
         let _guard = SingleInstanceGuard::acquire(&paths.lock_path)?;
         let ping = rt.block_on(app_runtime.spawn(async { "ok" }))?;
@@ -153,7 +257,15 @@ fn main() -> anyhow::Result<()> {
     }
 
     if let Some(legacy_path) = cli.import_legacy {
-        tracing::info!(path = %legacy_path.display(), "Legacy import target queued");
+        let report = import_legacy_readonly(&db, &legacy_path, &paths.backups_dir)?;
+        tracing::info!(
+            import_id = %report.import_id,
+            projects = report.projects_imported,
+            threads = report.threads_imported,
+            messages = report.messages_imported,
+            "Read-only legacy import completed"
+        );
+        return Ok(());
     }
 
     let _guard = SingleInstanceGuard::acquire(&paths.lock_path)?;
@@ -163,8 +275,27 @@ fn main() -> anyhow::Result<()> {
     });
 
     let dispatcher_for_keys = Arc::clone(&dispatcher);
-    let ui_state = AppUiState::new(settings.clone());
+    let mut ui_state = AppUiState::new(settings.clone());
+    ui_state.projects = db.list_projects()?;
+    ui_state.threads = db.list_threads()?;
+    for project in &ui_state.projects {
+        ui_state.expanded_projects.insert(project.id.clone());
+    }
+    if let Some(tid) = ui_state.threads.first().map(|t| t.id.clone()) {
+        ui_state.select_thread(tid.clone());
+        ui_state
+            .messages_by_thread
+            .insert(tid.clone(), db.list_messages(&tid)?);
+    }
+    ui_state.resource_usage = sample_process_resources();
+    let initial_statuses =
+        rt.block_on(provider_registry.detect_all(settings.custom_acp_command.as_deref()));
+    ui_state.quota_snapshots = build_quota_snapshots(&initial_statuses);
+    ui_state.provider_statuses = initial_statuses;
+    let _ = ProjectId::new();
+
     let runtime_for_ui = app_runtime.clone();
+    let orch_for_ui = Arc::clone(&orchestrator);
 
     gpuicn::app::run(
         AppConfig::new(APP_DISPLAY_NAME)
@@ -202,12 +333,13 @@ fn main() -> anyhow::Result<()> {
 
             let entity = cx.entity();
             let runtime_for_loop = runtime_for_ui.clone();
+            let orch_for_loop = Arc::clone(&orch_for_ui);
             let _bg = runtime_for_ui.spawn(async {
                 tracing::debug!("App background Tokio loop ready");
             });
             cx.spawn(async move |_weak, cx| {
                 while let Some(action) = action_rx.recv().await {
-                    handle_ui_action(&entity, &runtime_for_loop, action, cx);
+                    handle_ui_action(&entity, &runtime_for_loop, &orch_for_loop, action, cx);
                 }
             })
             .detach();
