@@ -1,0 +1,46 @@
+[package]
+name = "lingxi-app"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "lingxi-t3-native"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+clap.workspace = true
+gpui-icons.workspace = true
+gpui-kit.workspace = true
+gpui_platform.workspace = true
+gpuicn.workspace = true
+lingxi-acp = { path = "../acp" }
+lingxi-domain = { path = "../domain" }
+lingxi-git = { path = "../git" }
+lingxi-mcp = { path = "../mcp" }
+lingxi-orchestration = { path = "../orchestration" }
+lingxi-platform = { path = "../platform" }
+lingxi-providers = { path = "../providers" }
+lingxi-remote = { path = "../remote" }
+lingxi-storage = { path = "../storage" }
+lingxi-telemetry = { path = "../telemetry" }
+lingxi-terminal = { path = "../terminal" }
+lingxi-ui = { path = "../ui" }
+lingxi-updater = { path = "../updater" }
+lingxi-workspace = { path = "../workspace" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+toml.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

@@ -1,0 +1,21 @@
+[package]
+name = "lingxi-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+arboard.workspace = true
+dirs.workspace = true
+keyring.workspace = true
+lingxi-domain = { path = "../domain" }
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

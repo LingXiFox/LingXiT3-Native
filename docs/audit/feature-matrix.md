@@ -5,10 +5,10 @@
 
 | ID | 类别 | 功能项 | 目标 Crate | 验收方式 | 当前状态 |
 | --- | --- | --- | --- | --- | --- |
-| F-01 | 基础工程 | 15-Crate Cargo Workspace 与锁定 `Cargo.lock` | `workspace` | `cargo check --workspace` | Pending |
-| F-02 | 基础工程 | GPUI 原生窗口、应用生命周期与 Tokio 桥接 | `app` | `--check-startup` + 手动编译运行 | Pending |
-| F-03 | 视觉主题 | `gpuicn` + `gpui-kit` 集成与奶白/炭黑/狐橙 Light/Dark 主题 | `ui` | 主题对比度/token 单元测试 | Pending |
-| F-04 | 平台抽象 | macOS/Windows/Linux 路径、单实例锁、通知、剪贴板、密钥链 | `platform` | 跨平台抽象与路径单元测试 | Pending |
+| F-01 | 基础工程 | 15-Crate Cargo Workspace 与锁定 `Cargo.lock` | `workspace` | `cargo check --workspace` | Verified |
+| F-02 | 基础工程 | GPUI 原生窗口、应用生命周期与 Tokio 桥接 | `app` | `--check-startup` + 手动编译运行 | Verified |
+| F-03 | 视觉主题 | `gpuicn` + `gpui-kit` 集成与奶白/炭黑/狐橙 Light/Dark 主题 | `ui` | 主题对比度/token 单元测试 | Verified |
+| F-04 | 平台抽象 | macOS/Windows/Linux 路径、单实例锁、通知、剪贴板、密钥链 | `platform` | 跨平台抽象与路径单元测试 | Verified |
 | F-05 | UI 布局 | 工作区树状侧边栏（文件夹 + 活跃/历史会话 + Worktree） | `ui`, `app` | UI 状态与过滤单元测试 | Pending |
 | F-06 | UI 布局 | 多标签页与会话切换 | `ui`, `app` | Tab 状态切换测试 | Pending |
 | F-07 | UI 聊天 | Agent 聊天视图、流式 Markdown、代码块高亮、思考折叠 | `ui` | Markdown 分块与高亮测试 | Pending |

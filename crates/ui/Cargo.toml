@@ -1,0 +1,17 @@
+[package]
+name = "lingxi-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+gpui-icons.workspace = true
+gpui-kit.workspace = true
+gpui_platform.workspace = true
+gpuicn.workspace = true
+lingxi-domain = { path = "../domain" }
+tracing.workspace = true

@@ -1,0 +1,88 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/app",
+    "crates/ui",
+    "crates/domain",
+    "crates/orchestration",
+    "crates/providers",
+    "crates/acp",
+    "crates/storage",
+    "crates/workspace",
+    "crates/git",
+    "crates/terminal",
+    "crates/mcp",
+    "crates/telemetry",
+    "crates/remote",
+    "crates/platform",
+    "crates/updater",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+repository = "https://github.com/LingXiFox/LingXiT3-Native"
+authors = ["LingXiFox"]
+
+[workspace.dependencies]
+# UI & GPUI
+gpuicn = { version = "0.13.4", features = ["syntect"] }
+gpui-kit = { version = "=0.10.0", default-features = false, features = ["component", "syntect"] }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.12", features = ["font-kit"] }
+gpui-icons = "0.7.0"
+
+# Async & Network
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.26"
+axum = { version = "0.8", features = ["ws", "json"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+futures-util = "0.3"
+async-trait = "0.1"
+
+# Storage & Serialization
+rusqlite = { version = "0.35", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# System & Services
+portable-pty = "0.9"
+sysinfo = "0.35"
+dirs = "6"
+keyring = "3"
+arboard = "3"
+notify = "8"
+
+# Utilities & Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+thiserror = "2"
+anyhow = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+semver = "1"
+sha2 = "0.10"
+base64 = "0.22"
+regex = "1"
+clap = { version = "4", features = ["derive"] }
+which = "7"
+
+# Testing
+tempfile = "3"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.dev]
+debug = 1
+
+[profile.release]
+opt-level = "s"
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
