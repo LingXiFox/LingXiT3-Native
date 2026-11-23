@@ -193,6 +193,27 @@ fn handle_ui_action(
             UiAction::CloseCommandPalette => shell.state.command_palette_open = false,
             UiAction::OpenUpdateModal => shell.state.update_modal_open = true,
             UiAction::CloseUpdateModal => shell.state.update_modal_open = false,
+            UiAction::CheckUpdates => {
+                let channel = shell.state.settings.update_channel;
+                let view_handle = view.clone();
+                let handle = runtime.spawn(async move {
+                    lingxi_updater::check_for_updates(
+                        lingxi_updater::DEFAULT_GITHUB_RELEASES_URL,
+                        env!("CARGO_PKG_VERSION"),
+                        channel,
+                    )
+                    .await
+                });
+                cx.spawn(async move |_weak, async_cx| {
+                    if let Ok(Ok(update)) = handle.await {
+                        async_cx.update_entity(&view_handle, |shell, cx| {
+                            shell.state.available_update = update;
+                            cx.notify();
+                        });
+                    }
+                })
+                .detach();
+            }
             other => {
                 tracing::debug!(?other, "UI action queued for backend services");
             }
