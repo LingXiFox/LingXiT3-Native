@@ -251,8 +251,12 @@ fn main() -> anyhow::Result<()> {
         let _guard = SingleInstanceGuard::acquire(&paths.lock_path)?;
         tracing::info!(
             port = settings.remote_server_port,
-            "Headless server mode initialized"
+            "Starting headless remote WS/RPC server"
         );
+        rt.block_on(lingxi_remote::serve_on_port(
+            Arc::clone(&orchestrator),
+            settings.remote_server_port,
+        ))?;
         return Ok(());
     }
 
