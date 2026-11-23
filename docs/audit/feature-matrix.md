@@ -31,4 +31,4 @@
 | F-24 | 性能优化 | 启动/内存/虚拟列表/流式 Markdown/终端输出基准对比 | `app`, `docs` | 本机实测基准报告 | Verified |
 | F-25 | 构建发行 | Stable/Nightly 更新器、macOS `.app`/`.dmg` 打包与 3 平台 CI | `updater`, `.github` | 本机 macOS 打包 + 更新测试 | Verified |
 | F-26 | 上游追踪 | 自动化 T3 Code 上游差异审计脚本与 GitHub Actions | `scripts`, `.github` | `--dry-run` 实测通过 | Verified |
-| F-27 | 最终验收 | 全量测试、IME/中文字体、许可证检查、交付文档与验收报告 | `docs` | Phase 10 验收清单 | Pending |
+| F-27 | 最终验收 | 全量测试、IME/中文字体、许可证检查、交付文档与验收报告 | `docs` | Phase 10 验收清单（实测通过；跨平台 Runner/付费 Turn/人工 GUI 目视范围见验收报告） | Verified |
