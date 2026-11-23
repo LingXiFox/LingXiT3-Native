@@ -3950,6 +3950,7 @@ dependencies = [
 name = "lingxi-ui"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "gpui-icons",
  "gpui-kit",
  "gpui-pre-platform",

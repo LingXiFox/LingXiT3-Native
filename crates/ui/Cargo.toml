@@ -9,6 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+chrono.workspace = true
 gpui-icons.workspace = true
 gpui-kit.workspace = true
 gpui_platform.workspace = true

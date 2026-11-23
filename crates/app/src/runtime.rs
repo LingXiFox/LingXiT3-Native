@@ -6,6 +6,7 @@ use lingxi_platform::AppPaths;
 #[derive(Clone)]
 pub struct AppRuntime {
     pub paths: Arc<AppPaths>,
+    #[allow(dead_code)]
     pub settings: AppSettings,
     pub tokio_handle: tokio::runtime::Handle,
 }
